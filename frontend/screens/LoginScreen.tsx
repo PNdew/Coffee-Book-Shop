@@ -40,8 +40,10 @@ const LoginScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
         } catch (error) {
             if (axios.isAxiosError(error) && error.response) {
                 Alert.alert('Lỗi', error.response.data.error)
+                console.log('Lỗi', error.response.data.error)
             } else {
                 Alert.alert('Lỗi', 'Không thể kết nối đến server')
+                console.log('Lỗi', 'Không thể kết nối đến server')
             }
         }
     };
@@ -49,7 +51,7 @@ const LoginScreen = ({ navigation }: { navigation: NavigationProp<any> }) => {
     return (
         <View style={styles.container}>
             <View style={styles.main}>
-                <Image source={require('C:/Hoctap/DoAnDaNenTang/Cafesach-version2-ketnoiappvoibequawifi/Cafesach/frontend/assets/images/logo.png')} style={styles.logo}></Image>
+                <Image source={require('C:/Users/crist/OneDrive/Desktop/doan/Coffee-Book-Shop/frontend/assets/images/logo.png')} style={styles.logo}></Image>
 
                 <View>
                     <TextInput style={styles.input} value={SDTNV} onChangeText={setSDTNV} placeholder="Số điện thoại"></TextInput>

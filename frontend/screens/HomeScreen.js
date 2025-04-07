@@ -26,7 +26,7 @@ const HomeScreen = ({ route }) => {
       <Text style={styles.welcomeText}>Chào mừng trở lại, {userInfo?.TenNV}!</Text>
       <Text style={styles.locationText}>Vị trí: {userInfo?.ChucVuNV} </Text>
 
-      <Image source={require('C:/Hoctap/DoAnDaNenTang/Cafesach-version2-ketnoiappvoibequawifi/Cafesach/frontend/assets/images/logo.png')} style={styles.logo} />
+      <Image source={require('C:/Users/crist/OneDrive/Desktop/doan/Coffee-Book-Shop/frontend/assets/images/logo.png')} style={styles.logo} />
 
       <View style={[styles.searchContainer, isSearchFocused && styles.searchContainerFocused, { width: containerWidth }]}>
         <TextInput placeholder="Tìm kiếm nhanh" style={styles.searchInput} />
