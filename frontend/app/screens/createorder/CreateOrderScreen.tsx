@@ -58,7 +58,7 @@ export default function CreateOrderScreen() {
     }
     
     router.push({
-      pathname: './bill',
+      pathname: './Bill',
       params: { 
         totalAmount: totalAmount.toString(),
         subtotal: subtotal.toString(),
@@ -71,7 +71,7 @@ export default function CreateOrderScreen() {
 
   const handleVoucherSelect = () => {
     router.push({
-      pathname: './vouchers',
+      pathname: './Vouchers',
       params: { 
         currentVoucher: activeVoucher ? JSON.stringify(activeVoucher) : null,
         currentItems: JSON.stringify(items) // Thêm dòng này để truyền danh sách món đã chọn
@@ -155,12 +155,12 @@ export default function CreateOrderScreen() {
     setActiveTab(tab);
     if (tab === 'drink') {
       router.push({
-        pathname: './drinks',
+        pathname: './Drinks',
         params: { currentItems: JSON.stringify(items) }
       });
     } else if (tab === 'food') {
       router.push({
-        pathname: './foods',
+        pathname: './Foods',
         params: { currentItems: JSON.stringify(items) }
       });
     }

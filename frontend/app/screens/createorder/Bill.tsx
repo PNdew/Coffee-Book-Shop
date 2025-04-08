@@ -97,7 +97,7 @@ export default function BillScreen() {
         // Sử dụng push thay vì replace để dễ quay lại
         // Chuyển trang ngay với trạng thái pending
         router.push({
-          pathname: './payment-qr',
+          pathname: './Payment-QR',
           params: { 
             totalAmount: totalAmount.toString(),
             paymentInfo: JSON.stringify({

@@ -1,6 +1,6 @@
 import { SanphamAPI, VoucherAPI, DonghoadonAPI, OrderItem, Voucher } from '../types';
 
-const API_BASE_URL = 'http://localhost:8000/api'; 
+const API_BASE_URL = 'http://192.168.85.15:8000/api'; 
 
 // Hàm chuyển đổi từ SanphamAPI sang OrderItem
 export const convertSanphamToOrderItem = (sanpham: SanphamAPI): OrderItem => {
