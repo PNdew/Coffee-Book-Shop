@@ -1,6 +1,6 @@
 import { SanphamAPI, VoucherAPI, DonghoadonAPI, OrderItem, Voucher } from '../types';
 
-const API_BASE_URL = 'http://192.168.85.15:8000/api'; 
+const API_BASE_URL = 'http://localhost:8000/api'; 
 
 // Hàm chuyển đổi từ SanphamAPI sang OrderItem
 export const convertSanphamToOrderItem = (sanpham: SanphamAPI): OrderItem => {
@@ -32,6 +32,9 @@ export const fetchSanpham = async (): Promise<SanphamAPI[]> => {
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 giây timeout
     
     const response = await fetch(`${API_BASE_URL}/sanpham/`, {
+      headers: { 
+        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJTRFROViI6IjA5MTIzNDU2NzgiLCJUZW5OViI6Ik5ndXnhu4VuIFbEg24gTG9uZyIsIkNodWNWdU5WIjoiTmhhblZpZW4iLCJleHAiOjE3NDQ2NjYzMDcsInR5cGUiOiJhY2Nlc3MifQ.fkC_GZKnBzKvSFYI_LuYPSMfXflUciaIplkVxm15RYU` // Thay thế bằng cách lấy token từ SecureStore nếu cần
+      },
       signal: controller.signal
     });
     

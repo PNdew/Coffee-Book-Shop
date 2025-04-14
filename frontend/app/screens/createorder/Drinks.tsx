@@ -11,6 +11,8 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from '@/components/createorder/BackButton';
+import { fetchSanpham, convertSanphamToOrderItem } from '@/services/createorderapi';
+
 
 // Danh sách đồ uống đơn giản với tên và giá
 const DRINKS_DATA = [

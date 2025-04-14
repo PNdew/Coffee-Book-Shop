@@ -7,11 +7,11 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="create" />
-      <Stack.Screen name="bill" />
-      <Stack.Screen name="vouchers" />
-      <Stack.Screen name="payment-qr" />
-      <Stack.Screen name="menu" /> {/* Thêm route cho menu */}
+      <Stack.Screen name="CreateOrderScreen" />
+      <Stack.Screen name="Bill" />
+      <Stack.Screen name="Vouchers" />
+      <Stack.Screen name="Payment-QR" />
+      <Stack.Screen name="Menu" /> {/* Thêm route cho menu */}
     </Stack>
   );
 }

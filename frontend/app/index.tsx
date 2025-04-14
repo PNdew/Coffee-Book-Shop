@@ -4,6 +4,7 @@ import axios from "axios";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store"; // Lưu token an toàn
 
 const getApiUrl = () => {
   if (Platform.OS === "web") {
@@ -14,35 +15,36 @@ const getApiUrl = () => {
 };
 
 const LoginScreen = () => {
-  const router = useRouter(); // Sử dụng useRouter từ expo-router
+  const router = useRouter();
   const apiUrl = getApiUrl();
   const [SDTNV, setSDTNV] = useState("");
   const [MatKhau, setMatKhau] = useState("");
 
   const handleLogin = async () => {
     try {
-      const response = await axios.post(apiUrl + "login/", {
-        SDTNV,
-        MatKhau,
-      });
+      const response = await axios.post(`${apiUrl}login/`, {
+        SDTNV: SDTNV,
+        MatKhau: MatKhau,
+      }) ;
 
-      const userInfo = ({
-        TenNV: response.data.tenNV,
-        ChucVuNV: response.data.chucVuNV,
-      });
+      const { access, refresh } = response.data;
 
-      Alert.alert("Thành công", response.data.message);
+      // Lưu access token và refresh token vào SecureStore
+      if (Platform.OS === 'web') {
+        localStorage.setItem("access_token", access);
+        localStorage.setItem("refresh_token", refresh);
+      } else {
+        await SecureStore.setItemAsync("access_token", access);
+        await SecureStore.setItemAsync("refresh_token", refresh);
+      }
+      
+      Alert.alert("Đăng nhập thành công");
 
       // Điều hướng đến trang Home
-      router.push({
-        pathname: "../screens/HomeScreen", // Đường dẫn đến trang home
-        params: {
-          userInfo: JSON.stringify(userInfo)
-        },
-      });
+      router.push("./screens/HomeScreen");
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
-        Alert.alert("Lỗi", error.response.data.error);
+        Alert.alert("Lỗi", error.response.data.detail || "Sai tài khoản hoặc mật khẩu");
       } else {
         Alert.alert("Lỗi", "Không thể kết nối đến server");
       }
@@ -100,7 +102,6 @@ const styles = StyleSheet.create({
     marginHorizontal: "auto",
     backgroundColor: "#F3F3E7",
   },
-
   logo: {
     width: 250,
     height: 250,
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
   },
   logInTxt: {
     color: "#000000",
-    fontWeight: 700,
+    fontWeight: "700",
     fontSize: 16,
     textTransform: "uppercase",
   },

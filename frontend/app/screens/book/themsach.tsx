@@ -23,9 +23,9 @@ export default function ThemSachScreen() {
   const validateForm = () => {
     if (!tenSach.trim()) return 'Tên sách không được để trống';
     if (!tacGia.trim()) return 'Tác giả không được để trống';
-    if (!theLoai.trim()) return 'Thể loại không được để trống';
+    //if (!theLoai.trim()) return 'Thể loại không được để trống';
     if (!soLuong.trim() || isNaN(Number(soLuong))) return 'Số lượng phải là số';
-    if (!maSach.trim()) return 'Mã sách không được để trống';
+    // if (!maSach.trim()) return 'Mã sách không được để trống';
     return null;
   };
 

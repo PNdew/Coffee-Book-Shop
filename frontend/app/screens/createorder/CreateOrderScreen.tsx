@@ -14,7 +14,6 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import BackButton from '@/components/createorder/BackButton';
 import OrderItem from '@/components/createorder/OrderItem';
 import { OrderItem as OrderItemType, Voucher } from '@/types';
-import { fetchSanpham, convertSanphamToOrderItem } from '@/services/createorderapi';
 
 export default function CreateOrderScreen() {
   const router = useRouter();

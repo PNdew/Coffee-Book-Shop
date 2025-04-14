@@ -1,4 +1,5 @@
-
+import os
+from dotenv import load_dotenv
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -19,6 +20,7 @@ ALLOWED_HOSTS = ['localhost',
     '192.168.0.111',
     '192.168.85.15',
     '172.20.10.6',
+    '192.168.1.3'
 ] 
 
 
@@ -33,6 +35,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
     'cafebook',
 ]
 
@@ -128,3 +131,8 @@ MIGRATION_MODULES = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True  # Cho phép tất cả các domain kết nối
+
+load_dotenv()
+
+SECRET_KEY = os.getenv('SECRET_KEY')
+JWT_ALGORITHM = os.getenv('JWT_ALGORITHM')

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Sử dụng địa chỉ IP thực tế của bạn
-export const API_URL = 'http://192.168.85.15:8000';
+export const API_URL = 'http://localhost:8000';
 
 export interface Book {
   id: number;
@@ -25,7 +25,11 @@ export const bookService = {
     getAllBooks: async () => {
       try {
         console.log('Gọi API tại:', `${API_URL}/api/sach/`);
-        const response = await axios.get(`${API_URL}/api/sach/`);
+        const response = await axios.get(`${API_URL}/api/sach/`, {
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJTRFROViI6IjA5MTIzNDU2NzgiLCJUZW5OViI6Ik5ndXnhu4VuIFbEg24gTG9uZyIsIkNodWNWdU5WIjoiTmhhblZpZW4iLCJleHAiOjE3NDQ2NjYzMDcsInR5cGUiOiJhY2Nlc3MifQ.fkC_GZKnBzKvSFYI_LuYPSMfXflUciaIplkVxm15RYU`
+          }
+        });
         console.log('Dữ liệu sách nhận được:', response.data);
         
         // Xử lý cả hai trường hợp: có phân trang và không phân trang
