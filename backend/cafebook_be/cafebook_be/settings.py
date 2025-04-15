@@ -131,7 +131,9 @@ MIGRATION_MODULES = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True  # Cho phép tất cả các domain kết nối
-
+CORS_ALLOW_HEADERS = [
+    'authorization',
+]
 load_dotenv()
 
 SECRET_KEY = os.getenv('SECRET_KEY')

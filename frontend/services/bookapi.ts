@@ -27,7 +27,7 @@ export const bookService = {
         console.log('Gọi API tại:', `${API_URL}/api/sach/`);
         const response = await axios.get(`${API_URL}/api/sach/`, {
           headers: {
-            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJTRFROViI6IjA5MTIzNDU2NzgiLCJUZW5OViI6Ik5ndXnhu4VuIFbEg24gTG9uZyIsIkNodWNWdU5WIjoiTmhhblZpZW4iLCJleHAiOjE3NDQ2NjYzMDcsInR5cGUiOiJhY2Nlc3MifQ.fkC_GZKnBzKvSFYI_LuYPSMfXflUciaIplkVxm15RYU`
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
           }
         });
         console.log('Dữ liệu sách nhận được:', response.data);
@@ -49,7 +49,11 @@ export const bookService = {
     
     getBook: async (id: string) => {
       try {
-        const response = await axios.get(`${API_URL}/api/sach/${id}/`);
+        const response = await axios.get(`${API_URL}/api/sach/${id}/`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+          }
+        });
         return response.data;
       } catch (error) {
         console.error(`Lỗi khi lấy thông tin sách ${id}:`, error);
@@ -59,7 +63,11 @@ export const bookService = {
     
     addBook: async (bookData: BookInput) => {
       try {
-        const response = await axios.post(`${API_URL}/api/sach/`, bookData);
+        const response = await axios.post(`${API_URL}/api/sach/`, bookData, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+          }
+        });
         return response.data;
       } catch (error) {
         console.error('Lỗi khi thêm sách:', error);
@@ -69,7 +77,11 @@ export const bookService = {
     
     updateBook: async (id: string, bookData: Partial<Book>) => {
       try {
-        const response = await axios.put(`${API_URL}/api/sach/${id}/`, bookData);
+        const response = await axios.put(`${API_URL}/api/sach/${id}/`, bookData, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+          }
+        });
         return response.data;
       } catch (error) {
         console.error(`Lỗi khi cập nhật sách ${id}:`, error);
@@ -79,7 +91,11 @@ export const bookService = {
     
     deleteBook: async (id: string) => {
       try {
-        await axios.delete(`${API_URL}/api/sach/${id}/`);
+        await axios.delete(`${API_URL}/api/sach/${id}/`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+          }
+        });
       } catch (error) {
         console.error(`Lỗi khi xóa sách ${id}:`, error);
         throw error;
@@ -88,4 +104,3 @@ export const bookService = {
   };
   
   // Export các service khác nếu cần
-  

@@ -2,7 +2,6 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from cafebook.models import Attendance, NhanVien
 from math import radians, sin, cos, sqrt, atan2
-from ..decorators import jwt_required
 
 OFFICE_LAT = 10.762622  # Thay đổi theo tọa độ văn phòng thực tế
 OFFICE_LNG = 106.660172
@@ -18,7 +17,6 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     return R * c
 
 @api_view(['POST'])
-@jwt_required
 def check_attendance(request):
     employee_id = request.data.get('employee_id')
     latitude = float(request.data.get('latitude'))

@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from cafebook.models import NguyenLieu
 from cafebook.serializers import NguyenLieuSerializer
-from rest_framework.permissions import IsAuthenticated
+from ..permissions import IsAuthenticatedWithJWT
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 1000
@@ -18,4 +18,4 @@ class NguyenLieuViewSet(viewsets.ModelViewSet):
     search_fields = ['ten_nguyen_lieu', 'so_luong']
     ordering_fields = ['ten_nguyen_lieu', 'so_luong', 'gia_nhap']
     ordering = ['ten_nguyen_lieu']
-    # permission_classes = [IsAuthenticated]  # Bỏ comment nếu cần xác thực
+    permission_classes = [IsAuthenticatedWithJWT]  # Bỏ comment nếu cần xác thực

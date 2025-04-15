@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework import viewsets, status, filters
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
+from ..permissions import IsAuthenticatedWithJWT
 
 from cafebook.models import Sach
 from cafebook.serializers import SachSerializer
@@ -22,4 +22,4 @@ class SachViewSet(viewsets.ModelViewSet):
     search_fields = ['ten_sach', 'tac_gia']
     ordering_fields = ['ten_sach', 'tac_gia', 'so_luong_sach']
     ordering = ['ten_sach']
-    # permission_classes = [IsAuthenticated]  # Bỏ comment nếu cần xác thực
+    permission_classes = [IsAuthenticatedWithJWT]  
