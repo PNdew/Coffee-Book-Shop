@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Sử dụng địa chỉ IP thực tế của bạn
-export const API_URL = 'http://192.168.85.15:8000';
+export const API_URL = 'http://localhost:8000';
 
 // Interface cho nguyên liệu
 export interface Ingredient {
@@ -32,7 +32,11 @@ export const ingredientService = {
   getAllIngredients: async () => {
     try {
       console.log('Gọi API tại:', `${API_URL}/api/nguyenlieu/`);
-      const response = await axios.get(`${API_URL}/api/nguyenlieu/`);
+      const response = await axios.get(`${API_URL}/api/nguyenlieu/`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+        }
+      });
       console.log('Dữ liệu nhận được:', response.data);
       
       // Xử lý cả hai trường hợp:
@@ -55,7 +59,11 @@ export const ingredientService = {
   
   getIngredient: async (id: string) => {
     try {
-      const response = await axios.get(`${API_URL}/api/nguyenlieu/${id}/`);
+      const response = await axios.get(`${API_URL}/api/nguyenlieu/${id}/`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`
+        }
+      });
       return response.data;
     } catch (error) {
       console.error(`Error fetching ingredient ${id}:`, error);
@@ -65,7 +73,11 @@ export const ingredientService = {
   
   addIngredient: async (ingredientData: IngredientInput) => {
     try {
-      const response = await axios.post(`${API_URL}/api/nguyenlieu/`, ingredientData);
+      const response = await axios.post(`${API_URL}/api/nguyenlieu/`, ingredientData, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`
+        }
+      });
       return response.data;
     } catch (error) {
       console.error('Error adding ingredient:', error);
@@ -75,7 +87,11 @@ export const ingredientService = {
   
   updateIngredient: async (id: string, ingredientData: Partial<Ingredient>) => {
     try {
-      const response = await axios.put(`${API_URL}/api/nguyenlieu/${id}/`, ingredientData);
+      const response = await axios.put(`${API_URL}/api/nguyenlieu/${id}/`, ingredientData, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`
+        }
+      });
       return response.data;
     } catch (error) {
       console.error(`Error updating ingredient ${id}:`, error);
@@ -85,7 +101,11 @@ export const ingredientService = {
   
   deleteIngredient: async (id: string) => {
     try {
-      await axios.delete(`${API_URL}/api/nguyenlieu/${id}/`);
+      await axios.delete(`${API_URL}/api/nguyenlieu/${id}/`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`
+        }
+      });
     } catch (error) {
       console.error(`Error deleting ingredient ${id}:`, error);
       throw error;

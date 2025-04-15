@@ -10,19 +10,22 @@ from ..permissions import IsAuthenticatedWithJWT
 class SanphamViewSet(viewsets.ModelViewSet):
     queryset = Sanpham.objects.all()
     serializer_class = SanphamSerializer
+    permission_classes = [IsAuthenticatedWithJWT]
 
 class VoucherViewSet(viewsets.ModelViewSet):
     queryset = Voucher.objects.all()
     serializer_class = VoucherSerializer
+    permission_classes = [IsAuthenticatedWithJWT]
 
 class HoadonViewSet(viewsets.ModelViewSet):
     queryset = Hoadon.objects.all()
     serializer_class = HoadonSerializer
+    permission_classes = [IsAuthenticatedWithJWT]
 
 class DonghoadonViewSet(viewsets.ModelViewSet):
     queryset = Donghoadon.objects.all()
     serializer_class = DonghoadonSerializer
-
+    permission_classes = [IsAuthenticatedWithJWT]
 
     def perform_create(self, serializer):
         idhoadon = self.request.data.get('idhoadon')

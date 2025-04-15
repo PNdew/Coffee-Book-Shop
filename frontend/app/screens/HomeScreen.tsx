@@ -1,24 +1,42 @@
-import React, { useState } from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Platform } from 'react-native';
 import { FontAwesome, Feather } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';  // Dùng useLocalSearchParams để truy cập query
+import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+import jwt_decode from 'jwt-decode';
 
 type UserInfo = {
+  SDTNV: string;
   TenNV: string;
   ChucVuNV: string;
 };
 
 const HomeScreen = () => {
-  const router = useRouter();  // Dùng useRouter để truy cập query
+  const router = useRouter();
   const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
-  const params = useLocalSearchParams();  // Lấy query params từ router
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
-  let user = null;
-  try {
-    user = params.userInfo ? JSON.parse(decodeURIComponent(params.userInfo as string)) : null;
-  } catch (e) {
-    console.warn('Lỗi parse userInfo:', e);
-  }
+  useEffect(() => {
+    const getUserFromToken = async () => {
+      try {
+        let token;
+        if (Platform.OS === 'web') {
+          token = localStorage.getItem('access_token');
+        } else {
+          token = await SecureStore.getItemAsync('access_token');
+        }
+
+        if (token) {
+          const decoded = jwt_decode<UserInfo>(token);
+          setUserInfo(decoded);
+        }
+      } catch (error) {
+        console.error('Error decoding token:', error);
+      }
+    };
+
+    getUserFromToken();
+  }, []);
 
   const screenWidth = Dimensions.get('window').width;
   const containerWidth = screenWidth * 0.9; // 90% độ rộng màn hình
@@ -35,9 +53,12 @@ const HomeScreen = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      {/* Kiểm tra nếu userInfo tồn tại và hiển thị */}
-      <Text style={styles.welcomeText}>Chào mừng trở lại, {user?.TenNV || 'Người dùng' }!</Text>
-      <Text style={styles.locationText}>Vị trí: {user?.ChucVuNV || 'Vị trí không xác định'}</Text>
+      <Text style={styles.welcomeText}>
+        Chào mừng trở lại, {userInfo?.TenNV || 'Người dùng'}!
+      </Text>
+      <Text style={styles.locationText}>
+        Vị trí: {userInfo?.ChucVuNV || 'Vị trí không xác định'}
+      </Text>
 
       <Image source={require('@/assets/images/logo.png')} style={styles.logo} />
 
