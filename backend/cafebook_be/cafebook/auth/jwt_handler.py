@@ -15,7 +15,7 @@ class JWTHandler:
         payload = {
             'SDTNV': nhan_vien['SDTNV'],
             'TenNV': nhan_vien['TenNV'], 
-            'ChucVuNV': nhan_vien['ChucVuNV'],
+            'ChucVuNV': nhan_vien['IDChucVu'],
             'exp': datetime.utcnow() + timedelta(minutes=60),
             'type': 'access'
         }

@@ -3,18 +3,36 @@ import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, StyleSheet,
 import { FontAwesome, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import jwt_decode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 type UserInfo = {
   SDTNV: string;
   TenNV: string;
-  ChucVuNV: string;
+  ChucVuNV: number;
+  exp?: number;
+};
+
+const ROLE = {
+  MANAGER: 1,
+  STAFF: 2
 };
 
 const HomeScreen = () => {
   const router = useRouter();
   const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+
+  const clearToken = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        localStorage.removeItem('access_token');
+      } else {
+        await SecureStore.deleteItemAsync('access_token');
+      }
+    } catch (error) {
+      console.error('Error clearing token:', error);
+    }
+  };
 
   useEffect(() => {
     const getUserFromToken = async () => {
@@ -26,12 +44,35 @@ const HomeScreen = () => {
           token = await SecureStore.getItemAsync('access_token');
         }
 
-        if (token) {
-          const decoded = jwt_decode<UserInfo>(token);
+        console.log('Access token:', token);
+
+        if (!token) {
+          await clearToken();
+          router.replace('../index');
+          return;
+        }
+
+        try {
+          const decoded = jwtDecode<UserInfo>(token);
+          // Kiểm tra xem token có hết hạn không
+          const currentTime = Date.now() / 1000;
+          if (decoded.exp && decoded.exp < currentTime) {
+            console.log('Token expired');
+            await clearToken();
+            router.replace('../index');
+            return;
+          }
           setUserInfo(decoded);
+          console.log('Decoded user info:', decoded);
+        } catch (decodeError) {
+          console.error('Invalid token format:', decodeError);
+          await clearToken();
+          router.replace('../index');
         }
       } catch (error) {
-        console.error('Error decoding token:', error);
+        console.error('Error getting token:', error);
+        await clearToken();
+        router.replace('../index');
       }
     };
 
@@ -39,26 +80,61 @@ const HomeScreen = () => {
   }, []);
 
   const screenWidth = Dimensions.get('window').width;
-  const containerWidth = screenWidth * 0.9; // 90% độ rộng màn hình
-  const buttonWidth = (containerWidth - 40) / 3; // 40 = padding (20*2) + margin (10*2)
+  const containerWidth = screenWidth * 0.9;
+  const buttonWidth = (containerWidth - 40) / 3;
 
-  const menuItems: { title: string; icon: "list-alt" | "coffee" | "file-text-o" | "cutlery" | "book" | "bar-chart"; screen: string; onPress: () => void }[] = [
+  const baseMenuItems: { title: string; icon: "list-alt" | "coffee" | "file-text-o" | "cutlery" | "book" | "bar-chart"; screen: string; onPress: () => void }[] = [
     { title: 'Tạo Order', icon: 'list-alt', screen: 'CreateOrderScreen', onPress: () => router.push('./createorder/CreateOrderScreen') },
     { title: 'Quản lý nguyên liệu', icon: 'coffee', screen: 'IngredientScreen', onPress: () => router.push('./ingredient/IngredientScreen') },
-    { title: 'Danh sách hóa đơn', icon: 'file-text-o', screen: 'OrderScreen', onPress: () => router.push('./OrderScreen') },
+    { title: 'Quản lý hóa đơn', icon: 'file-text-o', screen: 'OrderScreen', onPress: () => router.push('./OrderScreen') },
     { title: 'Quản lý menu', icon: 'cutlery', screen: 'MenuScreen', onPress: () => router.push('./MenuScreen') },
     { title: 'Quản lý sách', icon: 'book', screen: 'BookScreen', onPress: () => router.push('./book/BookScreen') },
-    { title: 'Chấm công', icon: 'bar-chart', screen: 'AttendanceScreen', onPress: () => router.push('./AttendanceScreen') }
+    { title: 'Quản lý chấm công', icon: 'bar-chart', screen: 'AttendanceScreen', onPress: () => router.push('./AttendanceScreen') }
   ];
+
+  const managerMenuItems: { title: string; icon: "users" | "line-chart" | "ticket"; screen: string; onPress: () => void }[] = [
+    { title: 'Quản lý nhân viên', icon: 'users', screen: 'StaffScreen', onPress: () => router.push('./staff/StaffScreen') },
+    { title: 'Quản lý thống kê', icon: 'line-chart', screen: 'StatisticsScreen', onPress: () => router.push('./statistics/StatisticsScreen') },
+    { title: 'Quản lý voucher', icon: 'ticket', screen: 'VoucherScreen', onPress: () => router.push('./voucher/VoucherScreen') }
+  ];
+
+  const menuItems = userInfo?.ChucVuNV === ROLE.MANAGER
+    ? [...baseMenuItems, ...managerMenuItems]
+    : baseMenuItems;
+
+  console.log('User role:', userInfo?.ChucVuNV);
+  console.log('Menu items:', menuItems);
+
+  const handleLogout = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+      } else {
+        await SecureStore.deleteItemAsync('access_token');
+        await SecureStore.deleteItemAsync('refresh_token');
+      }
+      router.replace('/');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.welcomeText}>
-        Chào mừng trở lại, {userInfo?.TenNV || 'Người dùng'}!
-      </Text>
-      <Text style={styles.locationText}>
-        Vị trí: {userInfo?.ChucVuNV || 'Vị trí không xác định'}
-      </Text>
+      <View style={[styles.header, { width: containerWidth }]}>
+        <View style={styles.userInfoContainer}>
+          <Text style={styles.welcomeText}>
+            Chào mừng trở lại, {userInfo?.TenNV || 'Người dùng'}!
+          </Text>
+          <Text style={styles.locationText}>
+            Vị trí: {userInfo?.ChucVuNV === ROLE.MANAGER ? 'Quản lý' : 'Nhân viên'}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Text style={styles.logoutText}>Đăng xuất</Text>
+        </TouchableOpacity>
+      </View>
 
       <Image source={require('@/assets/images/logo.png')} style={styles.logo} />
 
@@ -91,12 +167,12 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   welcomeText: {
-    fontSize: 16,
+    fontSize: 18,
     marginBottom: 5,
     color: '#333',
   },
   locationText: {
-    fontSize: 14,
+    fontSize: 16,
     marginBottom: 20,
     color: '#666',
   },
@@ -150,6 +226,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000',
     textAlign: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    width: '100%',
+    marginBottom: 20,
+  },
+  userInfoContainer: {
+    flex: 1,
+  },
+  logoutButton: {
+    padding: 10,
+    backgroundColor: '#ff4444',
+    borderRadius: 5,
+  },
+  logoutText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 

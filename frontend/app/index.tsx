@@ -44,6 +44,7 @@ const LoginScreen = () => {
       router.push("./screens/HomeScreen");
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
+        console.log("Lỗi", error.response.data || "Sai tài khoản hoặc mật khẩu")
         Alert.alert("Lỗi", error.response.data.detail || "Sai tài khoản hoặc mật khẩu");
       } else {
         Alert.alert("Lỗi", "Không thể kết nối đến server");
@@ -54,7 +55,7 @@ const LoginScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.main}>
-        <Image source={require('@/assets/images/logo.png')} style={styles.logo}></Image>
+        <Image source={require('../assets/images/logo.png')} style={styles.logo}></Image>
 
         <View>
           <TextInput

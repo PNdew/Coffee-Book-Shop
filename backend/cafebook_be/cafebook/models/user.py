@@ -7,16 +7,7 @@ class NhanVien(models.Model):
     SDTNV = models.CharField(max_length=15, unique=True, null=False, db_column="SDTNV")
     EmailNV = models.EmailField(max_length=255, blank=True, null=True, db_column="EmailNV")
     CCCDNV = models.CharField(max_length=20, unique=True, null=False, db_column="CCCDNV")
-
-    CHUC_VU_CHOICES = [
-        ('QuanLy', 'Quản lý'),
-        ('PhaChe', 'Pha chế'),
-        ('ThuNgan', 'Thu ngân'),
-        ('PhucVu', 'Phục vụ'),
-        ('BaoVe', 'Bảo vệ'),
-        ('DonDep', 'Dọn dẹp'),
-    ]
-    ChucVuNV = models.CharField(max_length=20, choices=CHUC_VU_CHOICES, null=False, db_column="ChucVuNV")
+    ChucVuNV = models.CharField(max_length=20, null=False, db_column="IDChucVu")
 
     USERNAME_FIELD = 'SDTNV'
     REQUIRED_FIELDS = ['TenNV', 'CCCDNV']

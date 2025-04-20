@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.hashers import check_password
-import jwt
 from datetime import datetime, timedelta
 from ..auth.jwt_handler import JWTHandler
 
@@ -57,8 +56,6 @@ def login_view(request):
 
         return Response({
             "message": f"Đăng nhập thành công, chào {nhan_vien['TenNV']}",
-            "tenNV": nhan_vien['TenNV'],
-            "chucVuNV": nhan_vien['ChucVuNV'],
             "access": access_token,
             "refresh": refresh_token,
         }, status=status.HTTP_200_OK)
