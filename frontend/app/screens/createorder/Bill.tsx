@@ -1,18 +1,21 @@
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Image, 
-  SafeAreaView,
-  Alert
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { jwtDecode, JwtPayload } from 'jwt-decode';
+
+// Interface cho token JWT có thêm các trường tùy chỉnh
+interface CustomJwtPayload extends JwtPayload {
+  IDNhanVien?: number;
+  SDTNV?: number;
+  idnhanvien?: number;
+  TenNV?: string;
+  ChucVuNV?: number;
+  [key: string]: any; // Cho phép các trường khác
+}
 
 import BackButton from '@/components/createorder/BackButton';
 import { OrderItem, Voucher } from '@/types';
-import { createDonghoadon } from '@/services/createorderapi';
+import { submitOrderToAPI, getCurrentUser } from '@/services/createorderapi';
 
 export default function BillScreen() {
   const router = useRouter();
@@ -26,55 +29,57 @@ export default function BillScreen() {
     ? JSON.parse(params.voucherInfo as string) 
     : null;
 
-  // Hàm gửi đơn hàng lên API
-  const submitOrderToAPI = async () => {
+  // Hàm gửi đơn hàng lên API - với debug chi tiết 
+  const handleOrderSubmission = async () => {
     try {
-      // Chuyển đổi từ OrderItem sang DonghoadonAPI
-      const orderItems = items.map(item => ({
-        sanpham: parseInt(item.id),
-        soluongsp: item.quantity,
-        ghichu: '',
-        // Kiểm tra nếu activeVoucher tồn tại và id là số hợp lệ
-        voucher: activeVoucher && !isNaN(parseInt(activeVoucher.id)) 
-          ? parseInt(activeVoucher.id) 
-          : null
-      }));
+      console.log('Đang gửi đơn hàng lên API:', items);
       
-      console.log('Đang gửi đơn hàng lên API:', orderItems);
+      // Thử tạo payload đơn hàng trực tiếp ở đây để debug
+      const token = localStorage.getItem('access_token');
+      const decoded = token ? jwtDecode(token) : null;
       
-      // Gửi từng sản phẩm lên API với timeout dài hơn
-      for (const item of orderItems) {
-        try {
-          console.log('Đơn hàng đã được gửi thành công');
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000); // Tăng timeout lên 15 giây
-          
-          await createDonghoadon({
-            sanpham: item.sanpham,
-            soluongsp: item.soluongsp,
-            ghichu: item.ghichu,
-            voucher: item.voucher || undefined
-          });
-          
-          clearTimeout(timeoutId);
-          console.log('Đơn hàng đã được gửi thành công:', item);
-        } catch (itemError) {
-          console.error('Lỗi khi gửi sản phẩm:', itemError);
-          // Tiếp tục với sản phẩm tiếp theo thay vì dừng lại
-        }
+      if (!decoded) {
+        Alert.alert('Lỗi', 'Không thể đọc thông tin người dùng từ token');
+        return false;
       }
       
+      // Sử dụng hàm submitOrderToAPI
+      const orderIdResponse = await submitOrderToAPI(
+        items,
+        activeVoucher,
+        '' // Ghi chú
+      );
+      
+      console.log('Đơn hàng đã được gửi thành công, ID:', orderIdResponse);
       return true;
     } catch (error) {
       console.error('Lỗi khi gửi đơn hàng:', error);
-      Alert.alert('Lỗi', 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.');
+      
+      // Hiển thị thông báo lỗi cụ thể hơn
+      let errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.';
+      
+      if (error instanceof Error) {
+        // Nếu có lỗi từ API, hiển thị thông báo cụ thể hơn
+        if (error.message.includes('400')) {
+          errorMessage = 'Dữ liệu gửi đi không hợp lệ. Vui lòng kiểm tra lại thông tin đơn hàng.';
+        } else if (error.message.includes('401')) {
+          errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+        } else if (error.message.includes('500')) {
+          errorMessage = 'Lỗi máy chủ. Vui lòng thử lại sau.';
+        } else {
+          // Hiển thị message lỗi từ API nếu có
+          errorMessage = error.message;
+        }
+      }
+      
+      Alert.alert('Lỗi', errorMessage);
       return false;
     }
   };
 
   // Cập nhật hàm handleCashPayment
   const handleCashPayment = async () => {
-    const success = await submitOrderToAPI();
+    const success = await handleOrderSubmission();
     if (success) {
       Alert.alert('Thành công', 'Đơn hàng đã được thanh toán bằng tiền mặt', [
         { text: 'OK', onPress: () => router.replace('/') }
@@ -85,10 +90,27 @@ export default function BillScreen() {
   // Cập nhật hàm handleQRPayment
   const handleQRPayment = async () => {
     try {
-      // Thêm log để kiểm tra
-      console.log('Bắt đầu xử lý thanh toán QR');
+      console.log('===== Bắt đầu xử lý thanh toán QR =====');
       
-      const success = await submitOrderToAPI();
+      // Thử kiểm tra token trước khi gửi
+      const token = localStorage.getItem('access_token');
+      
+      if (!token) {
+        Alert.alert('Lỗi', 'Không tìm thấy token đăng nhập!');
+        return;
+      }
+      
+      try {
+        const decoded = jwtDecode<CustomJwtPayload>(token);
+        console.log('Staff ID info before sending request:');
+        if (decoded.idnhanvien) console.log('- idnhanvien:', decoded.idnhanvien);
+        if (decoded.IDNhanVien) console.log('- IDNhanVien:', decoded.IDNhanVien);
+        if (decoded.SDTNV) console.log('- SDTNV:', decoded.SDTNV);
+      } catch (e) {
+        console.error('Lỗi giải mã token:', e);
+      }
+      
+      const success = await handleOrderSubmission();
       console.log('Kết quả gửi API:', success);
       
       if (success) {
@@ -375,5 +397,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  testButton: {
+    backgroundColor: '#4287f5',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  testButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 });

@@ -11,35 +11,76 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from '@/components/createorder/BackButton';
+import { fetchSanpham, convertSanphamToOrderItem } from '@/services/createorderapi';
+import { OrderItem } from '@/types';
 
-// Danh sách đồ ăn đơn giản với tên và giá
-const FOODS_DATA = [
-  { id: '31', name: 'Bánh mì nướng bơ tỏi', price: 30000 },
-  { id: '32', name: 'Bánh mì sandwich kẹp thịt', price: 35000 },
-  { id: '33', name: 'Bánh croissant', price: 40000 },
-  { id: '34', name: 'Bánh sừng bò nhân phô mai', price: 45000 },
-  { id: '35', name: 'Bánh ngọt socola', price: 40000 },
-  { id: '36', name: 'Bánh mousse matcha', price: 50000 },
-  { id: '37', name: 'Bánh su kem', price: 35000 },
-  { id: '38', name: 'Khoai tây chiên', price: 45000 },
-  { id: '39', name: 'Gà viên chiên', price: 50000 },
-  { id: '40', name: 'Xúc xích nướng', price: 45000 }
-];
+// Hàm format giá tiền sang định dạng Việt Nam
+const formatCurrency = (price: number): string => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(price);
+};
 
 export default function FoodsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [foodsData, setFoodsData] = useState<OrderItem[]>([]);
   const [quantities, setQuantities] = useState<{[key: string]: number}>({});
   const [currentItems, setCurrentItems] = useState<any[]>([]);
   
   useEffect(() => {
-    // Khởi tạo số lượng ban đầu
-    const initialQuantities: {[key: string]: number} = {};
-    FOODS_DATA.forEach(item => {
-      initialQuantities[item.id] = 0;
-    });
-    setQuantities(initialQuantities);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const sanphamData = await fetchSanpham();
+        
+        // Log raw data from API
+        console.log('==== API DATA - SANPHAM ====');
+        console.log(JSON.stringify(sanphamData, null, 2));
+        console.log('Total items from API:', sanphamData.length);
+        
+        // Log all unique loaisp values to help with filtering
+        const uniqueTypes = [...new Set(sanphamData.map(item => item.loaisp))];
+        console.log('==== UNIQUE PRODUCT TYPES ====');
+        console.log(uniqueTypes);
+        
+        // Lọc các sản phẩm đồ ăn (có thể cần điều chỉnh dựa vào cấu trúc dữ liệu thực tế)
+        const foods = sanphamData
+          .filter(item => item.loaisp?.toLowerCase() === 'doan');
+        
+        // Log filtered foods data
+        console.log('==== FILTERED FOODS DATA ====');
+        console.log(JSON.stringify(foods, null, 2));
+        console.log('Foods count after filtering:', foods.length);
+        
+        const foodItems = foods.map(item => convertSanphamToOrderItem(item));
+        
+        // Log converted food items
+        console.log('==== CONVERTED FOOD ITEMS ====');
+        console.log(JSON.stringify(foodItems, null, 2));
+        
+        setFoodsData(foodItems);
+        
+        // Khởi tạo số lượng ban đầu
+        const initialQuantities: {[key: string]: number} = {};
+        foodItems.forEach(item => {
+          initialQuantities[item.id] = 0;
+        });
+        setQuantities(initialQuantities);
+        
+      } catch (err) {
+        console.error('Failed to fetch foods:', err);
+        setError('Không thể tải danh sách đồ ăn');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
     
     // Lấy danh sách món đã chọn từ trang create
     if (params.currentItems) {
@@ -68,14 +109,12 @@ export default function FoodsScreen() {
     }
   };
 
-  const addToOrder = (item: { id: string, name: string, price: number }) => {
+  const addToOrder = (item: OrderItem) => {
     const quantity = quantities[item.id] || 0;
     if (quantity <= 0) return;
     
     const orderItem = {
-      id: item.id,
-      name: item.name,
-      price: item.price,
+      ...item,
       quantity: quantity
     };
     
@@ -108,6 +147,26 @@ export default function FoodsScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Đồ ăn</Text>
+          </View>
+          <View style={styles.content}>
+            <View style={styles.topBar}>
+              <BackButton onPress={() => router.back()} />
+              <Text style={styles.pageTitle}>ĐỒ ĂN</Text>
+              <View style={{width: 40}} />
+            </View>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -123,13 +182,13 @@ export default function FoodsScreen() {
           </View>
           
           <FlatList
-            data={FOODS_DATA}
+            data={foodsData}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View style={styles.itemContainer}>
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemPrice}>{item.price.toLocaleString()}đ</Text>
+                  <Text style={styles.itemPrice}>{formatCurrency(item.price)}</Text>
                 </View>
                 
                 <View style={styles.quantityControls}>

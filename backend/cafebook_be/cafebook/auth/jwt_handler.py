@@ -14,6 +14,7 @@ class JWTHandler:
         """Tạo access token với thông tin nhân viên"""
         payload = {
             'SDTNV': nhan_vien['SDTNV'],
+            'IDNhanVien': nhan_vien['IDNhanVien'],
             'TenNV': nhan_vien['TenNV'], 
             'ChucVuNV': nhan_vien['IDChucVu'],
             'exp': datetime.utcnow() + timedelta(minutes=60),

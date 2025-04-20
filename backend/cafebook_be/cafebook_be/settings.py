@@ -79,8 +79,8 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "cafebook",
-        "USER": "root",
-        "PASSWORD": "1234",
+        "USER": "long",
+        "PASSWORD": "12345",
         "HOST": "127.0.0.1",
         "PORT": "3307",
     }

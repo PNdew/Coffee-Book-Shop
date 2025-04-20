@@ -15,13 +15,23 @@ class VoucherSerializer(serializers.ModelSerializer):
 class DonghoadonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Donghoadon
-        fields = ['idhoadon', 'sanpham', 'soluongsp', 
-                 'ghichu', 'voucher']
+        fields = '__all__'
+
+    def perform_create(self, serializer):
+        idhoadon = self.validated_data.get('idhoadon')
+
+        if idhoadon:
+            # Đếm số dòng hiện có với idhoadon và tự động tăng SoTTDong
+            existing_lines = Donghoadon.objects.filter(idhoadon=idhoadon).count()
+            # Tự động gán giá trị SoTTDong
+            serializer.save(sottdong=existing_lines + 1)
+        else:
+            raise serializers.ValidationError({"idhoadon": "Hóa đơn không được để trống"})
 
 class HoadonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Hoadon
-        fields = ['idhoadon', 'ngayhd', 'tongtienhd']
+        fields = ['idhoadon', 'ngayhd', 'idnhanvien']
 
 class NguyenLieuSerializer(serializers.ModelSerializer):
     class Meta:
