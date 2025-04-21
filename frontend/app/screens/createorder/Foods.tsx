@@ -6,7 +6,8 @@ import {
   TouchableOpacity, 
   FlatList, 
   SafeAreaView,
-  ActivityIndicator
+  ActivityIndicator,
+  TextInput
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,33 +30,22 @@ export default function FoodsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [foodsData, setFoodsData] = useState<OrderItem[]>([]);
+  const [filteredFoods, setFilteredFoods] = useState<OrderItem[]>([]);
   const [quantities, setQuantities] = useState<{[key: string]: number}>({});
   const [currentItems, setCurrentItems] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         const sanphamData = await fetchSanpham();
-        
-        // Log raw data from API
-        console.log('==== API DATA - SANPHAM ====');
-        console.log(JSON.stringify(sanphamData, null, 2));
-        console.log('Total items from API:', sanphamData.length);
-        
         // Log all unique loaisp values to help with filtering
         const uniqueTypes = [...new Set(sanphamData.map(item => item.loaisp))];
-        console.log('==== UNIQUE PRODUCT TYPES ====');
-        console.log(uniqueTypes);
         
         // Lọc các sản phẩm đồ ăn (có thể cần điều chỉnh dựa vào cấu trúc dữ liệu thực tế)
         const foods = sanphamData
           .filter(item => item.loaisp?.toLowerCase() === 'doan');
-        
-        // Log filtered foods data
-        console.log('==== FILTERED FOODS DATA ====');
-        console.log(JSON.stringify(foods, null, 2));
-        console.log('Foods count after filtering:', foods.length);
         
         const foodItems = foods.map(item => convertSanphamToOrderItem(item));
         
@@ -64,6 +54,7 @@ export default function FoodsScreen() {
         console.log(JSON.stringify(foodItems, null, 2));
         
         setFoodsData(foodItems);
+        setFilteredFoods(foodItems);
         
         // Khởi tạo số lượng ban đầu
         const initialQuantities: {[key: string]: number} = {};
@@ -127,6 +118,37 @@ export default function FoodsScreen() {
     });
   };
 
+  const addAllToOrder = () => {
+    const selectedItems = foodsData.filter(item => quantities[item.id] && quantities[item.id] > 0)
+      .map(item => ({
+        ...item,
+        quantity: quantities[item.id]
+      }));
+    
+    if (selectedItems.length === 0) return;
+    
+    router.push({
+      pathname: './CreateOrderScreen',
+      params: { 
+        selectedItems: JSON.stringify(selectedItems),
+        currentItems: JSON.stringify(currentItems)
+      }
+    });
+  };
+
+  // Hàm tìm kiếm sản phẩm theo tên
+  const handleSearch = (text: string) => {
+    setSearchQuery(text);
+    if (!text.trim()) {
+      setFilteredFoods(foodsData);
+    } else {
+      const filtered = foodsData.filter(item => 
+        item.name.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredFoods(filtered);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -181,8 +203,25 @@ export default function FoodsScreen() {
             <View style={{width: 40}} />
           </View>
           
+          {/* Thêm thanh tìm kiếm */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Tìm kiếm đồ ăn..."
+              value={searchQuery}
+              onChangeText={handleSearch}
+              placeholderTextColor="#999"
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => handleSearch('')}>
+                <Ionicons name="close-circle" size={20} color="#666" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          
           <FlatList
-            data={foodsData}
+            data={filteredFoods}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View style={styles.itemContainer}>
@@ -226,7 +265,28 @@ export default function FoodsScreen() {
               </View>
             )}
             contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              <Text style={styles.emptyListText}>
+                {searchQuery ? "Không tìm thấy đồ ăn phù hợp" : "Không có đồ ăn nào"}
+              </Text>
+            }
           />
+          
+          {/* Nút "Thêm tất cả" đặt ở ngoài FlatList để dễ nhìn hơn */}
+          {filteredFoods.length > 0 && (
+            <TouchableOpacity 
+              style={[
+                styles.addAllButton,
+                !Object.values(quantities).some(quantity => quantity > 0) 
+                  ? styles.addButtonDisabled 
+                  : {}
+              ]}
+              onPress={addAllToOrder}
+              disabled={!Object.values(quantities).some(quantity => quantity > 0)}
+            >
+              <Text style={styles.addAllButtonText}>THÊM TẤT CẢ</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -325,5 +385,55 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 16,
     color: '#f74848',
+  },
+  addAllButton: {
+    backgroundColor: '#f74848',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 20,
+    alignSelf: 'center',
+    width: '90%',
+    alignItems: 'center',
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  addAllButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    marginBottom: 15,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#333',
+  },
+  emptyListText: {
+    textAlign: 'center',
+    marginTop: 30,
+    fontSize: 16,
+    color: '#666',
+    fontStyle: 'italic',
   },
 });

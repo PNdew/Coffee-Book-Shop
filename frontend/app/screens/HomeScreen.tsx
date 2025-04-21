@@ -44,7 +44,7 @@ const HomeScreen = () => {
           token = await SecureStore.getItemAsync('access_token');
         }
 
-        console.log('Access token:', token);
+        // console.log('Access token:', token);
 
         if (!token) {
           await clearToken();
@@ -102,8 +102,8 @@ const HomeScreen = () => {
     ? [...baseMenuItems, ...managerMenuItems]
     : baseMenuItems;
 
-  console.log('User role:', userInfo?.ChucVuNV);
-  console.log('Menu items:', menuItems);
+  // console.log('User role:', userInfo?.ChucVuNV);
+  // console.log('Menu items:', menuItems);
 
   const handleLogout = async () => {
     try {

@@ -10,6 +10,7 @@ import {
   Alert
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import BackButton from '@/components/createorder/BackButton';
 import OrderItem from '@/components/createorder/OrderItem';
@@ -19,6 +20,8 @@ export default function CreateOrderScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'drink' | 'food'>('drink');
   const [items, setItems] = useState<OrderItemType[]>([]);
+  const [filteredItems, setFilteredItems] = useState<OrderItemType[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeVoucher, setActiveVoucher] = useState<Voucher | null>(null);
 
   // Tính tổng tiền trước khi áp dụng voucher
@@ -47,8 +50,21 @@ export default function CreateOrderScreen() {
   };
 
   const handleSearch = (text: string) => {
-    console.log('Searching for:', text);
+    setSearchQuery(text);
+    if (!text.trim()) {
+      setFilteredItems(items);
+    } else {
+      const filtered = items.filter(item => 
+        item.name.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredItems(filtered);
+    }
   };
+
+  // Update filteredItems when items changes
+  useEffect(() => {
+    setFilteredItems(items);
+  }, [items]);
 
   const handleConfirm = () => {
     if (items.length === 0) {
@@ -93,12 +109,63 @@ export default function CreateOrderScreen() {
     }
     
     // Xử lý danh sách sản phẩm hiện tại từ trang menu
-    if (params.currentItems && !params.newItem) {
+    if (params.currentItems && !params.newItem && !params.selectedItems) {
       try {
         const currentItems = JSON.parse(params.currentItems as string);
         setItems(currentItems);
       } catch (e) {
         console.error('Error parsing current items:', e);
+      }
+    }
+    
+    // Xử lý danh sách các sản phẩm được chọn từ nút "Thêm tất cả"
+    if (params.selectedItems) {
+      try {
+        const selectedItems = JSON.parse(params.selectedItems as string);
+        console.log('Received selected items:', selectedItems);
+        
+        // Nếu có danh sách sản phẩm hiện tại từ trang menu
+        if (params.currentItems) {
+          try {
+            const currentItems = JSON.parse(params.currentItems as string);
+            setItems(prevItems => {
+              // Đặt lại danh sách sản phẩm từ trang menu
+              const updatedItems = [...currentItems];
+              
+              // Thêm hoặc cập nhật các sản phẩm mới
+              selectedItems.forEach((newItem: OrderItemType) => {
+                const existingItemIndex = updatedItems.findIndex(item => item.id === newItem.id);
+                if (existingItemIndex >= 0) {
+                  updatedItems[existingItemIndex].quantity += newItem.quantity || 1;
+                } else {
+                  updatedItems.push(newItem);
+                }
+              });
+              
+              return updatedItems;
+            });
+          } catch (e) {
+            console.error('Error parsing current items with selected items:', e);
+          }
+        } else {
+          // Xử lý khi không có danh sách sản phẩm hiện tại
+          setItems(prevItems => {
+            const updatedItems = [...prevItems];
+            
+            selectedItems.forEach((newItem: OrderItemType) => {
+              const existingItemIndex = updatedItems.findIndex(item => item.id === newItem.id);
+              if (existingItemIndex >= 0) {
+                updatedItems[existingItemIndex].quantity += newItem.quantity || 1;
+              } else {
+                updatedItems.push(newItem);
+              }
+            });
+            
+            return updatedItems;
+          });
+        }
+      } catch (e) {
+        console.error('Error parsing selected items:', e);
       }
     }
     
@@ -147,7 +214,7 @@ export default function CreateOrderScreen() {
         console.error('Error parsing new item:', e);
       }
     }
-  }, [params.selectedVoucher, params.newItem, params.currentItems]);
+  }, [params.selectedVoucher, params.newItem, params.currentItems, params.selectedItems]);
 
   // Xử lý chuyển đến trang menu khi nhấn vào tab
   const handleTabPress = (tab: 'drink' | 'food') => {
@@ -175,7 +242,7 @@ export default function CreateOrderScreen() {
         <View style={styles.content}>
           <View style={styles.topBar}>
             <View style={styles.leftSection}>
-              <BackButton onPress={() => router.back()} />
+              <BackButton onPress={() => router.push({pathname: '../HomeScreen'})} />
             </View>
             
             <View style={styles.centerSection}>
@@ -192,11 +259,21 @@ export default function CreateOrderScreen() {
             </View>
           </View>
           
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Tìm kiếm món..."
-            placeholderTextColor="#999"
-          />
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Tìm kiếm món..."
+              value={searchQuery}
+              onChangeText={handleSearch}
+              placeholderTextColor="#999"
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => handleSearch('')}>
+                <Ionicons name="close-circle" size={20} color="#666" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
           
           <View style={styles.tabContainer}>
             <TouchableOpacity 
@@ -221,14 +298,20 @@ export default function CreateOrderScreen() {
           </View>
           
           <ScrollView style={styles.itemsList}>
-            {items.map(item => (
-              <OrderItem 
-                key={item.id} 
-                item={item} 
-                onIncrement={handleIncrement}
-                onDecrement={handleDecrement}
-              />
-            ))}
+            {filteredItems.length > 0 ? (
+              filteredItems.map(item => (
+                <OrderItem 
+                  key={item.id} 
+                  item={item} 
+                  onIncrement={handleIncrement}
+                  onDecrement={handleDecrement}
+                />
+              ))
+            ) : (
+              <Text style={styles.emptyListText}>
+                {searchQuery ? "Không tìm thấy món phù hợp" : "Chưa có món nào được chọn"}
+              </Text>
+            )}
           </ScrollView>
           
           <TouchableOpacity 
@@ -328,11 +411,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
-  searchInput: {
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
     padding: 10,
     borderRadius: 5,
     marginBottom: 10,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -430,5 +521,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#f74848',
     fontWeight: 'bold',
+  },
+  emptyListText: {
+    textAlign: 'center',
+    marginTop: 30,
+    fontSize: 16,
+    color: '#666',
+    fontStyle: 'italic',
   },
 });

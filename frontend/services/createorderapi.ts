@@ -139,124 +139,66 @@ export const fetchVoucher = async (): Promise<VoucherAPI[]> => {
   }
 };
 
-// Chuyển đổi từ OrderItem array sang dữ liệu gửi lên API
-const convertOrderItemsToOrderLines = (
-  items: OrderItem[],
-  voucherId: number | null = null
-): OrderLine[] => {
-  console.log('Converting order items to order lines:', items);
-
-  // Ensure all items have valid IDs
-  const validItems = items.filter(item => {
-    const isValid = item.id && !isNaN(parseInt(item.id));
-    if (!isValid) {
-      console.error('Invalid item ID found:', item);
-    }
-    return isValid;
-  });
-
-  if (validItems.length === 0) {
-    console.error('No valid items found to convert');
-  }
-
-  const orderLines = validItems.map(item => {
-    const orderLine: OrderLine = {
-      idsanpham: parseInt(item.id),
-      soluongsp: item.quantity,
-      idvoucher: voucherId
-    };
-
-    return orderLine;
-  });
-
-  console.log('Converted to order lines:', orderLines);
-  return orderLines;
-};
-
 // Gửi hóa đơn hoàn chỉnh lên API
 export const submitOrderToAPI = async (
-  items: OrderItem[], 
+  items: OrderItem[],
   voucher: Voucher | null = null,
   notes: string = ''
 ): Promise<number> => {
   try {
-    // Lấy thông tin user từ token
     const currentUser = await getCurrentUser();
-
     if (!currentUser) {
       throw new Error('Không tìm thấy thông tin người dùng, vui lòng đăng nhập lại');
     }
 
-    // Tính tổng tiền
-    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-    // Tính giảm giá (nếu có)
-    let discountAmount = 0;
-    let voucherId = null;
-
-    if (voucher) {
-      voucherId = parseInt(voucher.id);
-      if (voucher.discountType === 'percentage') {
-        discountAmount = subtotal * parseFloat(voucher.discountValue) / 100;
-      } else {
-        discountAmount = parseFloat(voucher.discountValue);
-      }
-    }
-
-    // Tính tổng tiền sau giảm giá
-    const totalAmount = Math.max(0, subtotal - discountAmount);
-
-    // Tạo dữ liệu hóa đơn hoàn chỉnh
-    const completeOrder = {
-      idnhanvien: currentUser.IDNhanVien,
-      lines: items.map(item => ({
-        idsanpham: item.id, // ID sản phẩm
-        soluongsp: item.quantity, // Số lượng sản phẩm
-        idvoucher: voucherId, // Voucher nếu có
-      }))
-    };
-
-    // Gửi dữ liệu lên API
     const token = await getAuthToken();
     const headers: HeadersInit = {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     };
-
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    console.log('Request headers:', headers);
-    console.log('Request body:', JSON.stringify(completeOrder, null, 2));
-    console.log('API endpoint:', `${API_BASE_URL}/createorder/`);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 giây timeout
-
-    const response = await fetch(`${API_BASE_URL}/createorder/`, {
+    // 1️⃣ Gửi request tạo hóa đơn
+    const createOrderRes = await fetch(`${API_BASE_URL}/order/create/`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(completeOrder),
-      signal: controller.signal
+      body: JSON.stringify({
+        idnhanvien: currentUser.IDNhanVien,
+      }),
     });
 
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API response error:', response.status, errorText);
-      throw new Error(`Lỗi khi tạo hóa đơn: ${response.status} - ${errorText}`);
+    if (!createOrderRes.ok) {
+      const errText = await createOrderRes.text();
+      throw new Error(`Không thể tạo hóa đơn: ${createOrderRes.status} - ${errText}`);
     }
 
-    const result = await response.json();
-    return result.idhoadon; // Trả về ID của hóa đơn mới tạo
+    const { idhoadon } = await createOrderRes.json();
 
+    // 2️⃣ Gửi chi tiết đơn hàng
+    const orderDetailsRes = await fetch(`${API_BASE_URL}/order/details/`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        orderId: idhoadon,
+        items: items.map(item => ({
+          idsanpham: item.id,
+          soluongsp: item.quantity,
+        })),
+        activeVoucher: voucher ? { idvoucher: parseInt(voucher.id) } : null,
+        notes,
+      }),
+    });
+
+    if (!orderDetailsRes.ok) {
+      const errText = await orderDetailsRes.text();
+      throw new Error(`Không thể gửi chi tiết đơn hàng: ${orderDetailsRes.status} - ${errText}`);
+    }
+
+    return idhoadon;
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      console.error('Request timed out');
-      throw new Error('Kết nối đến máy chủ quá lâu, vui lòng thử lại sau.');
-    }
-    console.error('Error submitting order:', error);
+    console.error('Lỗi submitOrderToAPI:', error);
     throw error;
   }
 };
+

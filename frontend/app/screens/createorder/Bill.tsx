@@ -1,63 +1,69 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { jwtDecode, JwtPayload } from 'jwt-decode';
+import BackButton from '@/components/createorder/BackButton';
+import { OrderItem, Voucher } from '@/types';
+import { submitOrderToAPI, getCurrentUser } from '@/services/createorderapi';
 
 // Interface cho token JWT có thêm các trường tùy chỉnh
 interface CustomJwtPayload extends JwtPayload {
   IDNhanVien?: number;
   SDTNV?: number;
-  idnhanvien?: number;
   TenNV?: string;
   ChucVuNV?: number;
-  [key: string]: any; // Cho phép các trường khác
 }
-
-import BackButton from '@/components/createorder/BackButton';
-import { OrderItem, Voucher } from '@/types';
-import { submitOrderToAPI, getCurrentUser } from '@/services/createorderapi';
 
 export default function BillScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  
+  const [success, setSuccess] = useState(false);
+
   const subtotal = Number(params.subtotal || 0);
   const discountAmount = Number(params.discountAmount || 0);
   const totalAmount = Number(params.totalAmount || 0);
   const items: OrderItem[] = params.items ? JSON.parse(params.items as string) : [];
-  const activeVoucher: Voucher | null = params.voucherInfo 
-    ? JSON.parse(params.voucherInfo as string) 
+  const activeVoucher: Voucher | null = params.voucherInfo
+    ? JSON.parse(params.voucherInfo as string)
     : null;
 
   // Hàm gửi đơn hàng lên API - với debug chi tiết 
   const handleOrderSubmission = async () => {
     try {
       console.log('Đang gửi đơn hàng lên API:', items);
-      
+
       // Thử tạo payload đơn hàng trực tiếp ở đây để debug
       const token = localStorage.getItem('access_token');
       const decoded = token ? jwtDecode(token) : null;
-      
+
       if (!decoded) {
         Alert.alert('Lỗi', 'Không thể đọc thông tin người dùng từ token');
         return false;
       }
-      
+
       // Sử dụng hàm submitOrderToAPI
       const orderIdResponse = await submitOrderToAPI(
         items,
         activeVoucher,
         '' // Ghi chú
       );
-      
+
       console.log('Đơn hàng đã được gửi thành công, ID:', orderIdResponse);
+      
+      // Hiển thị thông báo khi đơn hàng đã được lưu vào database
+      Alert.alert('Thành công', `Đơn hàng #${orderIdResponse} đã được lưu vào hệ thống`);
+      
+      // Hiển thị success container
+      setSuccess(true);
+      
       return true;
+
     } catch (error) {
       console.error('Lỗi khi gửi đơn hàng:', error);
-      
+
       // Hiển thị thông báo lỗi cụ thể hơn
       let errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.';
-      
+
       if (error instanceof Error) {
         // Nếu có lỗi từ API, hiển thị thông báo cụ thể hơn
         if (error.message.includes('400')) {
@@ -71,7 +77,7 @@ export default function BillScreen() {
           errorMessage = error.message;
         }
       }
-      
+
       Alert.alert('Lỗi', errorMessage);
       return false;
     }
@@ -91,36 +97,35 @@ export default function BillScreen() {
   const handleQRPayment = async () => {
     try {
       console.log('===== Bắt đầu xử lý thanh toán QR =====');
-      
+
       // Thử kiểm tra token trước khi gửi
       const token = localStorage.getItem('access_token');
-      
+
       if (!token) {
         Alert.alert('Lỗi', 'Không tìm thấy token đăng nhập!');
         return;
       }
-      
+
       try {
         const decoded = jwtDecode<CustomJwtPayload>(token);
         console.log('Staff ID info before sending request:');
-        if (decoded.idnhanvien) console.log('- idnhanvien:', decoded.idnhanvien);
         if (decoded.IDNhanVien) console.log('- IDNhanVien:', decoded.IDNhanVien);
         if (decoded.SDTNV) console.log('- SDTNV:', decoded.SDTNV);
       } catch (e) {
         console.error('Lỗi giải mã token:', e);
       }
-      
+
       const success = await handleOrderSubmission();
       console.log('Kết quả gửi API:', success);
-      
+
       if (success) {
         console.log('Chuyển đến trang QR với số tiền:', totalAmount);
-        
+
         // Sử dụng push thay vì replace để dễ quay lại
         // Chuyển trang ngay với trạng thái pending
         router.push({
           pathname: './Payment-QR',
-          params: { 
+          params: {
             totalAmount: totalAmount.toString(),
             paymentInfo: JSON.stringify({
               items: items.map(item => item.name).join(', '),
@@ -137,13 +142,18 @@ export default function BillScreen() {
     }
   };
 
+  // Hàm quay về trang CreateOrder
+  const handleReturnToCreateOrder = () => {
+    router.replace('./CreateOrderScreen');
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Hóa đơn</Text>
         </View>
-        
+
         <View style={styles.content}>
           <View style={styles.topBar}>
             <BackButton onPress={() => router.replace('./CreateOrderScreen')} />
@@ -151,29 +161,35 @@ export default function BillScreen() {
               <Text style={styles.billButtonText}>HÓA ĐƠN</Text>
             </TouchableOpacity>
             <View style={styles.logoSmall}>
-              <Image 
-                source={require('@/assets/images/icon.png')} 
-                style={styles.logoSmallImage} 
+              <Image
+                source={require('@/assets/images/icon.png')}
+                style={styles.logoSmallImage}
               />
             </View>
           </View>
-          
+
+          {success && (
+            <View style={styles.successContainer}>
+              <Text style={styles.successText}>Đơn hàng đã được lưu thành công!</Text>
+            </View>
+          )}
+
           <View style={styles.receiptContainer}>
             <View style={styles.logoContainer}>
-              <Image 
+              <Image
                 source={require('@/assets/images/logo.jpg')}
                 style={styles.logoImage}
               />
             </View>
-            
+
             <Text style={styles.receiptTitle}>PHIEU TINH TIEN</Text>
-            
+
             <View style={styles.tableHeader}>
               <Text style={[styles.tableCol, styles.smallCol]}>STT</Text>
               <Text style={[styles.tableCol, styles.largeCol]}>SAN PHAM</Text>
               <Text style={[styles.tableCol, styles.mediumCol]}>GIA TRI</Text>
             </View>
-            
+
             {items.map((item, index) => (
               <View key={item.id} style={styles.tableRow}>
                 <Text style={[styles.tableCol, styles.smallCol]}>{index + 1}</Text>
@@ -183,14 +199,14 @@ export default function BillScreen() {
                 </Text>
               </View>
             ))}
-            
+
             <View style={styles.divider} />
-            
+
             <View style={styles.subtotalRow}>
               <Text style={styles.subtotalLabel}>TONG CONG</Text>
               <Text style={styles.subtotalAmount}>{subtotal.toLocaleString()}đ</Text>
             </View>
-            
+
             {activeVoucher && (
               <View style={styles.discountRow}>
                 <Text style={styles.discountLabel}>
@@ -199,28 +215,35 @@ export default function BillScreen() {
                 <Text style={styles.discountAmount}>-{discountAmount.toLocaleString()}đ</Text>
               </View>
             )}
-            
+
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>= THANH TIEN</Text>
               <Text style={styles.totalAmount}>{totalAmount.toLocaleString()}đ</Text>
             </View>
           </View>
-          
+
           <View style={styles.paymentButtons}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.paymentButton, styles.cashButton]}
               onPress={handleCashPayment}
             >
               <Text style={styles.paymentButtonText}>Tiền mặt</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.paymentButton, styles.qrButton]}
               onPress={handleQRPayment}
             >
               <Text style={styles.paymentButtonText}>QR CODE</Text>
             </TouchableOpacity>
           </View>
+          
+          <TouchableOpacity
+            style={styles.returnButton}
+            onPress={handleReturnToCreateOrder}
+          >
+            <Text style={styles.returnButtonText}>Quay lại tạo đơn hàng</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </SafeAreaView>
@@ -359,7 +382,7 @@ const styles = StyleSheet.create({
     color: '#f74848',
     fontWeight: 'bold',
   },
-  
+
   // Thêm style cho totalRow, totalLabel, và totalAmount
   totalRow: {
     flexDirection: 'row',
@@ -375,7 +398,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  
+
   paymentButtons: {
     flexDirection: 'row',
     marginTop: 'auto',
@@ -409,5 +432,33 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  // Style cho nút quay lại
+  returnButton: {
+    backgroundColor: '#3498db',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  returnButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  // Style cho success container
+  successContainer: {
+    backgroundColor: '#d4edda',
+    borderColor: '#c3e6cb',
+    borderWidth: 1,
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  successText: {
+    color: '#155724',
+    fontWeight: 'bold',
   },
 });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, SafeAreaView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, SafeAreaView, ActivityIndicator, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from '@/components/createorder/BackButton';
@@ -21,8 +21,10 @@ export default function DrinksScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [drinksData, setDrinksData] = useState<OrderItem[]>([]);
+  const [filteredDrinks, setFilteredDrinks] = useState<OrderItem[]>([]);
   const [quantities, setQuantities] = useState<{[key: string]: number}>({});
   const [currentItems, setCurrentItems] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   
   useEffect(() => {
     const fetchData = async () => {
@@ -30,25 +32,14 @@ export default function DrinksScreen() {
         setLoading(true);
         const sanphamData = await fetchSanpham();
         
-        // Log raw data from API
-        console.log('==== API DATA - SANPHAM ====');
-        console.log(JSON.stringify(sanphamData, null, 2));
-        
         // Lọc các sản phẩm đồ uống (có thể cần điều chỉnh dựa vào cấu trúc dữ liệu thực tế)
         const drinks = sanphamData
           .filter(item => item.loaisp?.toLowerCase() === 'douong');
-        
-        // Log filtered drinks data
-        console.log('==== FILTERED DRINKS DATA ====');
-        console.log(JSON.stringify(drinks, null, 2));
-        
+
         const drinkItems = drinks.map(item => convertSanphamToOrderItem(item));
         
-        // Log converted drink items
-        console.log('==== CONVERTED DRINK ITEMS ====');
-        console.log(JSON.stringify(drinkItems, null, 2));
-        
         setDrinksData(drinkItems);
+        setFilteredDrinks(drinkItems);
         
         // Khởi tạo số lượng ban đầu
         const initialQuantities: {[key: string]: number} = {};
@@ -77,6 +68,19 @@ export default function DrinksScreen() {
       }
     }
   }, [params.currentItems]);
+
+  // Hàm tìm kiếm sản phẩm theo tên
+  const handleSearch = (text: string) => {
+    setSearchQuery(text);
+    if (!text.trim()) {
+      setFilteredDrinks(drinksData);
+    } else {
+      const filtered = drinksData.filter(item => 
+        item.name.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredDrinks(filtered);
+    }
+  };
 
   const incrementQuantity = (id: string) => {
     setQuantities(prev => ({
@@ -107,6 +111,24 @@ export default function DrinksScreen() {
       pathname: './CreateOrderScreen',
       params: { 
         newItem: JSON.stringify(orderItem),
+        currentItems: JSON.stringify(currentItems)
+      }
+    });
+  };
+
+  const addAllToOrder = () => {
+    const selectedItems = drinksData.filter(item => quantities[item.id] && quantities[item.id] > 0)
+      .map(item => ({
+        ...item,
+        quantity: quantities[item.id]
+      }));
+    
+    if (selectedItems.length === 0) return;
+    
+    router.push({
+      pathname: './CreateOrderScreen',
+      params: { 
+        selectedItems: JSON.stringify(selectedItems),
         currentItems: JSON.stringify(currentItems)
       }
     });
@@ -166,8 +188,25 @@ export default function DrinksScreen() {
             <View style={{width: 40}} />
           </View>
           
+          {/* Thêm thanh tìm kiếm */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Tìm kiếm đồ uống..."
+              value={searchQuery}
+              onChangeText={handleSearch}
+              placeholderTextColor="#999"
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => handleSearch('')}>
+                <Ionicons name="close-circle" size={20} color="#666" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          
           <FlatList
-            data={drinksData}
+            data={filteredDrinks}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View style={styles.itemContainer}>
@@ -211,7 +250,28 @@ export default function DrinksScreen() {
               </View>
             )}
             contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              <Text style={styles.emptyListText}>
+                {searchQuery ? "Không tìm thấy đồ uống phù hợp" : "Không có đồ uống nào"}
+              </Text>
+            }
           />
+          
+          {/* Nút "Thêm tất cả" đặt ở ngoài FlatList để dễ nhìn hơn */}
+          {filteredDrinks.length > 0 && (
+            <TouchableOpacity 
+              style={[
+                styles.addAllButton,
+                !Object.values(quantities).some(quantity => quantity > 0) 
+                  ? styles.addButtonDisabled 
+                  : {}
+              ]}
+              onPress={addAllToOrder}
+              disabled={!Object.values(quantities).some(quantity => quantity > 0)}
+            >
+              <Text style={styles.addAllButtonText}>THÊM TẤT CẢ</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -310,5 +370,55 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 16,
     color: '#f74848',
+  },
+  addAllButton: {
+    backgroundColor: '#f74848',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 20,
+    alignSelf: 'center',
+    width: '90%',
+    alignItems: 'center',
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  addAllButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    marginBottom: 15,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#333',
+  },
+  emptyListText: {
+    textAlign: 'center',
+    marginTop: 30,
+    fontSize: 16,
+    color: '#666',
+    fontStyle: 'italic',
   },
 });
