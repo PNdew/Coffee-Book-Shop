@@ -25,7 +25,7 @@ def createOrder(request):
             return JsonResponse({'error': 'Nhân viên không tồn tại'}, status=404)
 
         hoadon = Hoadon.objects.create(
-            ngayhd=timezone.now() + timedelta,
+            ngayhd=timezone.now(),
             idnhanvien=nhanvien
         )
 
