@@ -4,12 +4,12 @@ from .product import Sanpham
 from .invoice import Hoadon
 
 class Donghoadon(models.Model):
-    idhoadon = models.ForeignKey(Hoadon, on_delete=models.CASCADE, db_column='idhoadon')
-    sottdong = models.AutoField(primary_key=True)
-    sanpham = models.ForeignKey(Sanpham, on_delete=models.CASCADE, db_column='idsanpham')
-    soluongsp = models.IntegerField()
-    ghichu = models.CharField(max_length=255, blank=True, null=True)
-    voucher = models.ForeignKey(Voucher, on_delete=models.SET_NULL, db_column='idvoucher', blank=True, null=True)
+    idhoadon = models.ForeignKey(Hoadon, on_delete=models.CASCADE, db_column='IDHoaDon')
+    sottdong = models.IntegerField(db_column='SoTTDong')
+    idsanpham = models.ForeignKey(Sanpham, on_delete=models.CASCADE, db_column='IDSanPham')
+    soluongsp = models.IntegerField(db_column='SoLuongSP')
+    ghichu = models.CharField(max_length=255, blank=True, null=True, db_column='GhiChu')
+    idvoucher = models.ForeignKey(Voucher, on_delete=models.SET_NULL, db_column='IDVoucher', blank=True, null=True)
 
     def __str__(self):
         return f"{self.idhoadon} - {self.sottdong} - {self.sanpham.tensp} - {self.soluongsp}"

@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 
 // Sử dụng địa chỉ IP thực tế của bạn
 export const API_URL = 'http://localhost:8000';
@@ -20,14 +22,29 @@ export interface BookInput {
   trang_thai: string;
 }
 
+// Hàm lấy token xác thực từ localStorage hoặc SecureStore
+const getAuthToken = async (): Promise<string | null> => {
+  try {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem('access_token');
+    } else {
+      return await SecureStore.getItemAsync('access_token');
+    }
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return null;
+  }
+};
+
 // Thêm service cho sách
 export const bookService = {
     getAllBooks: async () => {
       try {
         console.log('Gọi API tại:', `${API_URL}/api/sach/`);
+        const token = await getAuthToken();
         const response = await axios.get(`${API_URL}/api/sach/`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+            Authorization: token ? `Bearer ${token}` : '',
           }
         });
         console.log('Dữ liệu sách nhận được:', response.data);
@@ -49,9 +66,10 @@ export const bookService = {
     
     getBook: async (id: string) => {
       try {
+        const token = await getAuthToken();
         const response = await axios.get(`${API_URL}/api/sach/${id}/`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+            Authorization: token ? `Bearer ${token}` : '',
           }
         });
         return response.data;
@@ -63,9 +81,10 @@ export const bookService = {
     
     addBook: async (bookData: BookInput) => {
       try {
+        const token = await getAuthToken();
         const response = await axios.post(`${API_URL}/api/sach/`, bookData, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+            Authorization: token ? `Bearer ${token}` : '',
           }
         });
         return response.data;
@@ -77,9 +96,10 @@ export const bookService = {
     
     updateBook: async (id: string, bookData: Partial<Book>) => {
       try {
+        const token = await getAuthToken();
         const response = await axios.put(`${API_URL}/api/sach/${id}/`, bookData, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+            Authorization: token ? `Bearer ${token}` : '',
           }
         });
         return response.data;
@@ -91,9 +111,10 @@ export const bookService = {
     
     deleteBook: async (id: string) => {
       try {
+        const token = await getAuthToken();
         await axios.delete(`${API_URL}/api/sach/${id}/`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+            Authorization: token ? `Bearer ${token}` : '',
           }
         });
       } catch (error) {

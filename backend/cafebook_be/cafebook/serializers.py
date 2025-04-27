@@ -15,13 +15,12 @@ class VoucherSerializer(serializers.ModelSerializer):
 class DonghoadonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Donghoadon
-        fields = ['idhoadon', 'sanpham', 'soluongsp', 
-                 'ghichu', 'voucher']
+        fields = '__all__'
 
 class HoadonSerializer(serializers.ModelSerializer):
     class Meta:
         model = Hoadon
-        fields = ['idhoadon', 'ngayhd', 'tongtienhd']
+        fields = ['idhoadon', 'ngayhd', 'idnhanvien']
 
 class NguyenLieuSerializer(serializers.ModelSerializer):
     class Meta:

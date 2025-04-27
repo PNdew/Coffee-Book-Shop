@@ -1,45 +1,68 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  FlatList, 
-  SafeAreaView,
-  ActivityIndicator
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, SafeAreaView, ActivityIndicator, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BackButton from '@/components/createorder/BackButton';
+import { fetchSanpham, convertSanphamToOrderItem } from '@/services/createorderapi';
+import { OrderItem } from '@/types';
 
-// Danh sách đồ ăn đơn giản với tên và giá
-const FOODS_DATA = [
-  { id: '31', name: 'Bánh mì nướng bơ tỏi', price: 30000 },
-  { id: '32', name: 'Bánh mì sandwich kẹp thịt', price: 35000 },
-  { id: '33', name: 'Bánh croissant', price: 40000 },
-  { id: '34', name: 'Bánh sừng bò nhân phô mai', price: 45000 },
-  { id: '35', name: 'Bánh ngọt socola', price: 40000 },
-  { id: '36', name: 'Bánh mousse matcha', price: 50000 },
-  { id: '37', name: 'Bánh su kem', price: 35000 },
-  { id: '38', name: 'Khoai tây chiên', price: 45000 },
-  { id: '39', name: 'Gà viên chiên', price: 50000 },
-  { id: '40', name: 'Xúc xích nướng', price: 45000 }
-];
+// Hàm format giá tiền sang định dạng Việt Nam
+const formatCurrency = (price: number): string => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(price);
+};
 
 export default function FoodsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [foodsData, setFoodsData] = useState<OrderItem[]>([]);
+  const [filteredFoods, setFilteredFoods] = useState<OrderItem[]>([]);
   const [quantities, setQuantities] = useState<{[key: string]: number}>({});
   const [currentItems, setCurrentItems] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   
   useEffect(() => {
-    // Khởi tạo số lượng ban đầu
-    const initialQuantities: {[key: string]: number} = {};
-    FOODS_DATA.forEach(item => {
-      initialQuantities[item.id] = 0;
-    });
-    setQuantities(initialQuantities);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const sanphamData = await fetchSanpham();
+        // Log all unique loaisp values to help with filtering
+        const uniqueTypes = [...new Set(sanphamData.map(item => item.loaisp))];
+        
+        // Lọc các sản phẩm đồ ăn (có thể cần điều chỉnh dựa vào cấu trúc dữ liệu thực tế)
+        const foods = sanphamData
+          .filter(item => item.loaisp?.toLowerCase() === 'doan');
+        
+        const foodItems = foods.map(item => convertSanphamToOrderItem(item));
+        
+        // Log converted food items
+        console.log('==== CONVERTED FOOD ITEMS ====');
+        console.log(JSON.stringify(foodItems, null, 2));
+        
+        setFoodsData(foodItems);
+        setFilteredFoods(foodItems);
+        
+        // Khởi tạo số lượng ban đầu
+        const initialQuantities: {[key: string]: number} = {};
+        foodItems.forEach(item => {
+          initialQuantities[item.id] = 0;
+        });
+        setQuantities(initialQuantities);
+        
+      } catch (err) {
+        console.error('Failed to fetch foods:', err);
+        setError('Không thể tải danh sách đồ ăn');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
     
     // Lấy danh sách món đã chọn từ trang create
     if (params.currentItems) {
@@ -68,14 +91,12 @@ export default function FoodsScreen() {
     }
   };
 
-  const addToOrder = (item: { id: string, name: string, price: number }) => {
+  const addToOrder = (item: OrderItem) => {
     const quantity = quantities[item.id] || 0;
     if (quantity <= 0) return;
     
     const orderItem = {
-      id: item.id,
-      name: item.name,
-      price: item.price,
+      ...item,
       quantity: quantity
     };
     
@@ -86,6 +107,37 @@ export default function FoodsScreen() {
         currentItems: JSON.stringify(currentItems)
       }
     });
+  };
+
+  const addAllToOrder = () => {
+    const selectedItems = foodsData.filter(item => quantities[item.id] && quantities[item.id] > 0)
+      .map(item => ({
+        ...item,
+        quantity: quantities[item.id]
+      }));
+    
+    if (selectedItems.length === 0) return;
+    
+    router.push({
+      pathname: './CreateOrderScreen',
+      params: { 
+        selectedItems: JSON.stringify(selectedItems),
+        currentItems: JSON.stringify(currentItems)
+      }
+    });
+  };
+
+  // Hàm tìm kiếm sản phẩm theo tên
+  const handleSearch = (text: string) => {
+    setSearchQuery(text);
+    if (!text.trim()) {
+      setFilteredFoods(foodsData);
+    } else {
+      const filtered = foodsData.filter(item => 
+        item.name.toLowerCase().includes(text.toLowerCase())
+      );
+      setFilteredFoods(filtered);
+    }
   };
 
   if (loading) {
@@ -108,6 +160,26 @@ export default function FoodsScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Đồ ăn</Text>
+          </View>
+          <View style={styles.content}>
+            <View style={styles.topBar}>
+              <BackButton onPress={() => router.back()} />
+              <Text style={styles.pageTitle}>ĐỒ ĂN</Text>
+              <View style={{width: 40}} />
+            </View>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -122,14 +194,31 @@ export default function FoodsScreen() {
             <View style={{width: 40}} />
           </View>
           
+          {/* Thêm thanh tìm kiếm */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Tìm kiếm đồ ăn..."
+              value={searchQuery}
+              onChangeText={handleSearch}
+              placeholderTextColor="#999"
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => handleSearch('')}>
+                <Ionicons name="close-circle" size={20} color="#666" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          
           <FlatList
-            data={FOODS_DATA}
+            data={filteredFoods}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View style={styles.itemContainer}>
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemPrice}>{item.price.toLocaleString()}đ</Text>
+                  <Text style={styles.itemPrice}>{formatCurrency(item.price)}</Text>
                 </View>
                 
                 <View style={styles.quantityControls}>
@@ -167,7 +256,28 @@ export default function FoodsScreen() {
               </View>
             )}
             contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              <Text style={styles.emptyListText}>
+                {searchQuery ? "Không tìm thấy đồ ăn phù hợp" : "Không có đồ ăn nào"}
+              </Text>
+            }
           />
+          
+          {/* Nút "Thêm tất cả" đặt ở ngoài FlatList để dễ nhìn hơn */}
+          {filteredFoods.length > 0 && (
+            <TouchableOpacity 
+              style={[
+                styles.addAllButton,
+                !Object.values(quantities).some(quantity => quantity > 0) 
+                  ? styles.addButtonDisabled 
+                  : {}
+              ]}
+              onPress={addAllToOrder}
+              disabled={!Object.values(quantities).some(quantity => quantity > 0)}
+            >
+              <Text style={styles.addAllButtonText}>THÊM TẤT CẢ</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -266,5 +376,55 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 16,
     color: '#f74848',
+  },
+  addAllButton: {
+    backgroundColor: '#f74848',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 20,
+    alignSelf: 'center',
+    width: '90%',
+    alignItems: 'center',
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  addAllButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    marginBottom: 15,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#333',
+  },
+  emptyListText: {
+    textAlign: 'center',
+    marginTop: 30,
+    fontSize: 16,
+    color: '#666',
+    fontStyle: 'italic',
   },
 });

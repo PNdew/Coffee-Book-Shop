@@ -5,111 +5,81 @@ import {
   StyleSheet, 
   FlatList, 
   TouchableOpacity, 
-  SafeAreaView 
+  SafeAreaView,
+  ActivityIndicator,
+  ScrollView,
+  Dimensions
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import BackButton from '@/components/createorder/BackButton';
 import VoucherItem from '@/components/createorder/VoucherItem';
-import { Voucher, VoucherAPI } from '@/types';
+import { Voucher, VoucherAPI, OrderItem } from '@/types';
 import { fetchVoucher, convertVoucherAPIToVoucher } from '@/services/createorderapi';
 
-const tabs = ['Tất cả', 'Đồ uống', 'Đồ ăn', 'Khác'];
+// Lấy chiều rộng màn hình để tính toán kích thước
+const SCREEN_WIDTH = Dimensions.get('window').width;
 
-// Danh sách voucher mẫu từ ảnh
-const MOCK_VOUCHERS: Voucher[] = [
-  { 
-    id: '1', 
-    title: 'Giảm giá 10% cho Đồ uống', 
-    expireDate: '31/03/2025', 
-    discountValue: '10', 
-    discountType: 'percentage', 
-    minimumOrderValue: 0,
-    applicableItems: ['DoUong']
-  },
-  { 
-    id: '2', 
-    title: 'Giảm giá 15% cho Đồ ăn', 
-    expireDate: '05/04/2025', 
-    discountValue: '15', 
-    discountType: 'percentage', 
-    minimumOrderValue: 0,
-    applicableItems: ['DoAn']
-  },
-  { 
-    id: '3', 
-    title: 'Giảm giá 20% cho tất cả sản phẩm', 
-    expireDate: '10/04/2025', 
-    discountValue: '20', 
-    discountType: 'percentage', 
-    minimumOrderValue: 0,
-    applicableItems: ['Khac']
-  },
-  { 
-    id: '4', 
-    title: 'Giảm giá 5% cho Đồ uống', 
-    expireDate: '30/03/2025', 
-    discountValue: '5', 
-    discountType: 'percentage', 
-    minimumOrderValue: 0,
-    applicableItems: ['DoUong']
-  },
-  { 
-    id: '5', 
-    title: 'Giảm giá 25% cho Đồ ăn', 
-    expireDate: '15/04/2025', 
-    discountValue: '25', 
-    discountType: 'percentage', 
-    minimumOrderValue: 0,
-    applicableItems: ['DoAn']
-  },
-  { 
-    id: '6', 
-    title: 'Giảm giá 30% cho tất cả sản phẩm', 
-    expireDate: '12/04/2025', 
-    discountValue: '30', 
-    discountType: 'percentage', 
-    minimumOrderValue: 0,
-    applicableItems: ['Khac']
-  },
-  { 
-    id: '7', 
-    title: 'Giảm giá 12% cho Đồ uống', 
-    expireDate: '20/04/2025', 
-    discountValue: '12', 
-    discountType: 'percentage', 
-    minimumOrderValue: 0,
-    applicableItems: ['DoUong']
-  },
-  { 
-    id: '8', 
-    title: 'Giảm giá 18% cho Đồ ăn', 
-    expireDate: '07/04/2025', 
-    discountValue: '18', 
-    discountType: 'percentage', 
-    minimumOrderValue: 0,
-    applicableItems: ['DoAn']
-  },
-  { 
-    id: '9', 
-    title: 'Giảm giá 22% cho tất cả sản phẩm', 
-    expireDate: '17/04/2025', 
-    discountValue: '22', 
-    discountType: 'percentage', 
-    minimumOrderValue: 0,
-    applicableItems: ['Khac']
-  },
-  { 
-    id: '10', 
-    title: 'Giảm giá 8% cho Đồ uống', 
-    expireDate: '29/03/2025', 
-    discountValue: '8', 
-    discountType: 'percentage', 
-    minimumOrderValue: 0,
-    applicableItems: ['DoUong']
-  }
+// Hàm format giá tiền sang định dạng Việt Nam
+const formatCurrency = (price: number): string => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(price);
+};
+
+// Định nghĩa tabs với ID và tên hiển thị
+const tabs = [
+  { id: 'all', name: 'Tất cả' },
+  { id: 'applicable', name: 'Áp dụng' },
+  { id: 'thucuong', name: 'Thức uống' },
+  { id: 'doan', name: 'Đồ ăn' },
+  { id: 'khac', name: 'Khác' }
 ];
+
+// Chuyển đổi loại sản phẩm từ backend sang tiếng Việt có dấu
+const getDisplayNameForCategory = (category: string): string => {
+  switch(category?.toLowerCase()) {
+    case 'thucuong': return 'thức uống';
+    case 'doan': return 'đồ ăn';
+    case 'khac': return 'khác';
+    default: return category || '';
+  }
+};
+
+// Kiểm tra xem voucher có áp dụng được cho các món đã chọn hay không
+const isVoucherApplicable = (voucher: Voucher, items: OrderItem[]): boolean => {
+  if (!items || items.length === 0) return false;
+  
+  // Tính tổng tiền đơn hàng
+  const orderTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
+  // Kiểm tra giá trị tối thiểu
+  if (voucher.minimumOrderValue && orderTotal < voucher.minimumOrderValue) {
+    return false;
+  }
+  
+  // Nếu voucher áp dụng cho tất cả sản phẩm
+  if (voucher.applicableItems?.includes('khac') || voucher.title.includes('tất cả')) {
+    return true;
+  }
+  
+  // Kiểm tra danh sách áp dụng
+  const hasDoUong = items.some(item => item.id.startsWith('1') || item.id.startsWith('2'));
+  const hasDoAn = items.some(item => item.id.startsWith('3') || item.id.startsWith('4'));
+  
+  if (voucher.applicableItems?.includes('thucuong') || voucher.title.toLowerCase().includes('thức uống')) {
+    return hasDoUong;
+  }
+  
+  if (voucher.applicableItems?.includes('doan') || voucher.title.toLowerCase().includes('đồ ăn')) {
+    return hasDoAn;
+  }
+  
+  return false;
+};
 
 export default function VoucherManagementScreen() {
   const router = useRouter();
@@ -120,8 +90,8 @@ export default function VoucherManagementScreen() {
   
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [filteredVouchers, setFilteredVouchers] = useState<Voucher[]>([]);
-  const [currentItems, setCurrentItems] = useState<any[]>([]); // Thêm state này
-
+  const [currentItems, setCurrentItems] = useState<OrderItem[]>([]);
+  
   // Lấy voucher hiện tại từ params (nếu có)
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   
@@ -131,6 +101,7 @@ export default function VoucherManagementScreen() {
       try {
         const items = JSON.parse(params.currentItems as string);
         setCurrentItems(items);
+        console.log('Items for voucher filtering:', items);
       } catch (e) {
         console.error('Error parsing current items:', e);
       }
@@ -141,41 +112,40 @@ export default function VoucherManagementScreen() {
   useEffect(() => {
     const loadVouchers = async () => {
       try {
-        // Đặt dữ liệu mẫu trước để giao diện hiển thị nhanh
-        setVouchers(MOCK_VOUCHERS);
-        setFilteredVouchers(MOCK_VOUCHERS);
-        setLoading(false); // Tắt loading ngay lập tức để hiển thị UI
+        setLoading(true);
         
-        // Sau đó thử lấy dữ liệu từ API (nếu có)
+        // Lấy dữ liệu từ API
         try {
           const voucherData = await fetchVoucher();
+          console.log('Voucher data from API:', voucherData);
           
           if (voucherData && voucherData.length > 0) {
-            const formattedVouchers = voucherData.map(convertVoucherAPIToVoucher);
+            const formattedVouchers = voucherData.map(item => {
+              const voucher = convertVoucherAPIToVoucher(item);
+              // Thêm thông tin applicableItems dựa vào loaisp từ API
+              voucher.applicableItems = [item.loaisp?.toLowerCase()];
+
+              // Cập nhật tiêu đề với tên hiển thị đúng
+              const displayCategory = getDisplayNameForCategory(item.loaisp);
+              voucher.title = `Giảm giá ${item.giamgia}% cho ${displayCategory}`;
+              
+              return voucher;
+            });
+            
             setVouchers(formattedVouchers);
             
             // Cập nhật lại danh sách đã lọc theo tab hiện tại
-            if (activeTab === 0) {
-              setFilteredVouchers(formattedVouchers);
-            } else {
-              const loaisp = tabs[activeTab];
-              setFilteredVouchers(
-                formattedVouchers.filter(voucher => {
-                  if (loaisp === 'Đồ uống') {
-                    return voucher.title.includes('Đồ uống') || voucher.applicableItems?.includes('DoUong');
-                  } else if (loaisp === 'Đồ ăn') {
-                    return voucher.title.includes('Đồ ăn') || voucher.applicableItems?.includes('DoAn');
-                  } else if (loaisp === 'Khác') {
-                    return voucher.title.includes('tất cả sản phẩm') || voucher.applicableItems?.includes('Khac');
-                  }
-                  return false;
-                })
-              );
-            }
+            filterVouchersByTab(activeTab, formattedVouchers);
+          } else {
+            console.log('No vouchers found from API, using mock data');
+            setVouchers([]);
+            setFilteredVouchers([]);
           }
         } catch (err) {
           console.error('Error loading vouchers from API:', err);
-          // Đã có dữ liệu mẫu nên không cần xử lý lỗi
+          setError('Không thể tải danh sách voucher');
+        } finally {
+          setLoading(false);
         }
       } catch (err) {
         console.error('Error loading vouchers:', err);
@@ -187,28 +157,42 @@ export default function VoucherManagementScreen() {
     loadVouchers();
   }, []);
   
-  // Lọc voucher theo tab đã chọn
-  useEffect(() => {
-    if (activeTab === 0) {
+  // Hàm lọc voucher theo tab
+  const filterVouchersByTab = (tabIndex: number, voucherList = vouchers) => {
+    if (tabIndex === 0) {
       // Tất cả
-      setFilteredVouchers(vouchers);
+      setFilteredVouchers(voucherList);
+    } else if (tabIndex === 1) {
+      // Áp dụng được cho giỏ hàng hiện tại
+      setFilteredVouchers(
+        voucherList.filter(voucher => isVoucherApplicable(voucher, currentItems))
+      );
     } else {
       // Lọc theo loại
-      const loaisp = tabs[activeTab];
+      const selectedTab = tabs[tabIndex].id;
+      
       setFilteredVouchers(
-        vouchers.filter(voucher => {
-          if (loaisp === 'Đồ uống') {
-            return voucher.title.includes('Đồ uống') || voucher.applicableItems?.includes('DoUong');
-          } else if (loaisp === 'Đồ ăn') {
-            return voucher.title.includes('Đồ ăn') || voucher.applicableItems?.includes('DoAn');
-          } else if (loaisp === 'Khác') {
-            return voucher.title.includes('tất cả sản phẩm') || voucher.applicableItems?.includes('Khac');
+        voucherList.filter(voucher => {
+          if (selectedTab === 'thucuong') { // Thức uống
+            return voucher.applicableItems?.includes('thucuong') || 
+                   voucher.title.toLowerCase().includes('thức uống');
+          } else if (selectedTab === 'doan') { // Đồ ăn
+            return voucher.applicableItems?.includes('doan') || 
+                   voucher.title.toLowerCase().includes('đồ ăn');
+          } else if (selectedTab === 'khac') { // Khác
+            return voucher.applicableItems?.includes('khac') || 
+                   voucher.title.toLowerCase().includes('tất cả');
           }
           return false;
         })
       );
     }
-  }, [activeTab, vouchers]);
+  };
+  
+  // Lọc voucher theo tab đã chọn
+  useEffect(() => {
+    filterVouchersByTab(activeTab);
+  }, [activeTab, vouchers, currentItems]);
 
   useEffect(() => {
     if (params.currentVoucher) {
@@ -223,6 +207,13 @@ export default function VoucherManagementScreen() {
 
   // Xử lý chọn voucher
   const handleSelectVoucher = (voucher: Voucher) => {
+    // Kiểm tra xem voucher có áp dụng được không
+    if (!isVoucherApplicable(voucher, currentItems)) {
+      // Hiển thị thông báo hoặc xử lý khi voucher không áp dụng được
+      alert('Voucher này không áp dụng được cho đơn hàng hiện tại');
+      return;
+    }
+    
     // Trở về trang Order kèm voucher đã chọn và danh sách món đã chọn
     router.push({
       pathname: './CreateOrderScreen',
@@ -238,41 +229,39 @@ export default function VoucherManagementScreen() {
     router.back(); // Sử dụng router.back() thay vì router.replace để nhanh hơn
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Quản lý voucher</Text>
-          </View>
-          <View style={styles.content}>
-            <View style={styles.topBar}>
-              <BackButton onPress={handleBackToOrder} />
-            </View>
-            <Text style={styles.loadingText}>Đang tải voucher...</Text>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const renderContent = () => {
+    if (loading) {
+      return <ActivityIndicator size="large" color="#f74848" style={styles.loader} />;
+    }
 
-  if (error) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Quản lý voucher</Text>
-          </View>
-          <View style={styles.content}>
-            <View style={styles.topBar}>
-              <BackButton onPress={handleBackToOrder} />
-            </View>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
+    if (error) {
+      return <Text style={styles.errorText}>{error}</Text>;
+    }
+
+    if (filteredVouchers.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Không tìm thấy voucher nào</Text>
         </View>
-      </SafeAreaView>
+      );
+    }
+
+    return (
+      <FlatList
+        data={filteredVouchers}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <VoucherItem 
+            voucher={item} 
+            isSelected={selectedVoucher?.id === item.id}
+            isApplicable={isVoucherApplicable(item, currentItems)}
+            onSelect={() => handleSelectVoucher(item)}
+          />
+        )}
+        contentContainerStyle={styles.listContent}
+      />
     );
-  }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -284,62 +273,41 @@ export default function VoucherManagementScreen() {
         <View style={styles.content}>
           <View style={styles.topBar}>
             <BackButton onPress={handleBackToOrder} />
-            <TouchableOpacity style={styles.voucherButton}>
-              <Text style={styles.voucherButtonText}>QUẢN LÝ VOUCHER</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.searchButton}>
-              <Ionicons name="search" size={24} color="#000" />
-            </TouchableOpacity>
+            <Text style={styles.pageTitle}>VOUCHER</Text>
+            <View style={{width: 40}} />
           </View>
           
-          <View style={styles.tabContainer}>
-            <FlatList
-              data={tabs}
-              horizontal
+          <View style={styles.tabScrollContainer}>
+            <ScrollView 
+              horizontal 
               showsHorizontalScrollIndicator={false}
-              renderItem={({ item, index }) => (
-                <TouchableOpacity 
+              contentContainerStyle={styles.tabContainer}
+            >
+              {tabs.map((tab, index) => (
+                <TouchableOpacity
+                  key={index}
                   style={[
-                    styles.tabButton, 
-                    activeTab === index && styles.activeTabButton
+                    styles.tabButton,
+                    activeTab === index ? styles.activeTabButton : {}
                   ]}
                   onPress={() => setActiveTab(index)}
                 >
                   <Text 
                     style={[
-                      styles.tabText, 
-                      activeTab === index && styles.activeTabText
+                      styles.tabButtonText,
+                      activeTab === index ? styles.activeTabButtonText : {}
                     ]}
                   >
-                    {item}
+                    {tab.name}
                   </Text>
                 </TouchableOpacity>
-              )}
-              keyExtractor={(item, index) => index.toString()}
-            />
+              ))}
+            </ScrollView>
           </View>
           
-          <View style={styles.filterRow}>
-            <Text style={styles.productsCount}>{filteredVouchers.length} voucher</Text>
-            <TouchableOpacity style={styles.filterButton}>
-              <Ionicons name="filter" size={20} color="#f00" />
-            </TouchableOpacity>
+          <View style={styles.listContainer}>
+            {renderContent()}
           </View>
-          
-          <FlatList
-            data={filteredVouchers}
-            renderItem={({ item }) => (
-              <VoucherItem 
-                voucher={item} 
-                onSelect={(voucher) => handleSelectVoucher(voucher)}
-              />
-            )}
-            keyExtractor={(item) => item.id}
-            style={styles.vouchersList}
-            ListEmptyComponent={
-              <Text style={styles.emptyText}>Không có voucher nào</Text>
-            }
-          />
         </View>
       </View>
     </SafeAreaView>
@@ -378,61 +346,62 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
   },
-  voucherButton: {
-    backgroundColor: '#ffb6b6',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    elevation: 3,
-  },
-  voucherButtonText: {
+  pageTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
   },
-  searchButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+  tabScrollContainer: {
+    height: 50,
+    marginBottom: 10,
   },
   tabContainer: {
-    marginBottom: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 40,
   },
   tabButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    marginRight: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 8,
     borderRadius: 20,
     backgroundColor: '#eee',
+    minWidth: 80,
+    width: (SCREEN_WIDTH - 100) / 3, // Adjust width based on screen size
+    maxWidth: 120,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   activeTabButton: {
     backgroundColor: '#f74848',
   },
-  tabText: {
+  tabButtonText: {
     fontWeight: 'bold',
+    fontSize: 13,
+    textAlign: 'center',
   },
-  activeTabText: {
+  activeTabButtonText: {
     color: 'white',
   },
-  filterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  productsCount: {
-    fontSize: 14,
-    color: '#666',
-  },
-  filterButton: {
-    padding: 5,
-  },
-  vouchersList: {
+  listContainer: {
     flex: 1,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 10,
   },
-  loadingText: {
+  listContent: {
+    paddingBottom: 20,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
     textAlign: 'center',
-    marginTop: 20,
     fontSize: 16,
+    color: '#666',
+    fontStyle: 'italic',
   },
   errorText: {
     textAlign: 'center',
@@ -440,10 +409,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'red',
   },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 16,
-    color: '#666',
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });
