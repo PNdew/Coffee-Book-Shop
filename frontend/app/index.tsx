@@ -1,8 +1,7 @@
-import { Image, StyleSheet, Text, View, TextInput, TouchableOpacity, Alert } from "react-native";
+import { Image, StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Platform } from "react-native";
 import { useState } from "react";
 import axios from "axios";
 import Constants from "expo-constants";
-import { Platform } from "react-native";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store"; // Lưu token an toàn
 
@@ -41,7 +40,7 @@ const LoginScreen = () => {
       Alert.alert("Đăng nhập thành công");
 
       // Điều hướng đến trang Home
-      router.push("./screens/HomeScreen");
+      // router.push("./screens/HomeScreen");
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         console.log("Lỗi", error.response.data || "Sai tài khoản hoặc mật khẩu")
@@ -100,13 +99,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     maxWidth: 960,
-    marginHorizontal: "auto",
+    alignSelf: "center",
     backgroundColor: "#F3F3E7",
   },
   logo: {
     width: 250,
     height: 250,
-    marginHorizontal: "auto",
+    alignSelf: "center",
   },
   input: {
     height: 50,

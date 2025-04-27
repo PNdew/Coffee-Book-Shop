@@ -41,8 +41,8 @@ export default function RootLayout() {
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="screens/HomeScreen" options={{ headerShown: false }} />
-      <Stack.Screen name="screens/createorder" options={{ headerShown: false }} />
-      <Stack.Screen name="screens/ingredient" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/createorder/CreateOrderScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/ingredient/IngredientScreen" options={{ headerShown: false }} />
       <Stack.Screen name="screens/OrderScreen" options={{ headerShown: false }} />
       <Stack.Screen name="screens/MenuScreen" options={{ headerShown: false }} />
       <Stack.Screen name="screens/book/BookScreen" options={{ headerShown: false }} />
