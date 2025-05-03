@@ -1,53 +1,33 @@
 import { Image, StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Platform } from "react-native";
 import { useState } from "react";
-import axios from "axios";
-import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store"; // Lưu token an toàn
-
-const getApiUrl = () => {
-  if (Platform.OS === "web") {
-    return Constants.expoConfig?.extra?.API_URL;
-  } else {
-    return Constants.expoConfig?.extra?.API_URL_MOBILE;
-  }
-};
+import { login } from "../services/authapi"; // Sử dụng hàm login từ authapi
 
 const LoginScreen = () => {
   const router = useRouter();
-  const apiUrl = getApiUrl();
   const [SDTNV, setSDTNV] = useState("");
   const [MatKhau, setMatKhau] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     try {
-      const response = await axios.post(`${apiUrl}login/`, {
-        SDTNV: SDTNV,
-        MatKhau: MatKhau,
-      }) ;
-
-      const { access, refresh } = response.data;
-
-      // Lưu access token và refresh token vào SecureStore
-      if (Platform.OS === 'web') {
-        localStorage.setItem("access_token", access);
-        localStorage.setItem("refresh_token", refresh);
-      } else {
-        await SecureStore.setItemAsync("access_token", access);
-        await SecureStore.setItemAsync("refresh_token", refresh);
-      }
+      setLoading(true);
       
-      Alert.alert("Đăng nhập thành công");
-
-      // Điều hướng đến trang Home
-      router.push("./screens/HomeScreen");
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        console.log("Lỗi", error.response.data || "Sai tài khoản hoặc mật khẩu")
-        Alert.alert("Lỗi", error.response.data.detail || "Sai tài khoản hoặc mật khẩu");
+      const user = await login(SDTNV, MatKhau);
+      
+      if (user) {
+        Alert.alert("Đăng nhập thành công");
+        // Điều hướng đến trang Home
+        router.push("./screens/HomeScreen");
       } else {
-        Alert.alert("Lỗi", "Không thể kết nối đến server");
+        Alert.alert("Lỗi", "Sai tài khoản hoặc mật khẩu");
       }
+    } catch (error) {
+      console.error("Lỗi đăng nhập:", error);
+      Alert.alert("Lỗi", "Không thể kết nối đến server");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -79,8 +59,12 @@ const LoginScreen = () => {
         </View>
 
         <View>
-          <TouchableOpacity style={styles.logInBtn} onPress={handleLogin}>
-            <Text style={styles.logInTxt}>Đăng nhập</Text>
+          <TouchableOpacity 
+            style={[styles.logInBtn, loading && styles.logInBtnDisabled]} 
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            <Text style={styles.logInTxt}>{loading ? "Đang đăng nhập..." : "Đăng nhập"}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -131,6 +115,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF8F8F",
     justifyContent: "center",
     alignItems: "center",
+  },
+  logInBtnDisabled: {
+    backgroundColor: "#cccccc",
   },
   logInTxt: {
     color: "#000000",

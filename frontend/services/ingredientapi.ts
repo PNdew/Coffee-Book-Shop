@@ -11,6 +11,7 @@ export interface Ingredient {
   ten_nguyen_lieu: string;
   so_luong: number;
   don_vi: string;
+  gia_nhap?: number;
 }
 
 // Interface cho kết quả API trả về

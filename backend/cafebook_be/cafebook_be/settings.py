@@ -36,7 +36,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'rest_framework_simplejwt',
     'cafebook',
 ]
 
@@ -79,10 +78,10 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "cafebook",
-        "USER": "long",
-        "PASSWORD": "12345",
+        "USER": "root",
+        "PASSWORD": "Manhm0ss@",
         "HOST": "127.0.0.1",
-        "PORT": "3307",
+        "PORT": "3306",
     }
 }
 

@@ -1,16 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Platform, Alert } from 'react-native';
 import { FontAwesome, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
-import { jwtDecode } from 'jwt-decode';
-
-type UserInfo = {
-  SDTNV: string;
-  TenNV: string;
-  ChucVuNV: number;
-  exp?: number;
-};
+import { getUserFromToken, getPermissionsByRole, logout } from '../../services/authapi';
+import type { UserInfo, Permissions } from '../../services/authapi';
 
 const ROLE = {
   MANAGER: 1,
@@ -21,102 +14,83 @@ const HomeScreen = () => {
   const router = useRouter();
   const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-
-  const clearToken = async () => {
-    try {
-      if (Platform.OS === 'web') {
-        localStorage.removeItem('access_token');
-      } else {
-        await SecureStore.deleteItemAsync('access_token');
-      }
-    } catch (error) {
-      console.error('Error clearing token:', error);
-    }
-  };
+  const [permissions, setPermissions] = useState<Permissions>({
+    canView: true,
+    canAdd: false,
+    canEdit: false,
+    canDelete: false
+  });
 
   useEffect(() => {
-    const getUserFromToken = async () => {
+    const fetchUserInfo = async () => {
       try {
-        let token;
-        if (Platform.OS === 'web') {
-          token = localStorage.getItem('access_token');
-        } else {
-          token = await SecureStore.getItemAsync('access_token');
-        }
-
-        // console.log('Access token:', token);
-
-        if (!token) {
-          await clearToken();
+        const user = await getUserFromToken();
+        
+        if (!user) {
+          await logout();
           router.replace('../index');
           return;
         }
-
-        try {
-          const decoded = jwtDecode<UserInfo>(token);
-          // Kiểm tra xem token có hết hạn không
-          const currentTime = Date.now() / 1000;
-          if (decoded.exp && decoded.exp < currentTime) {
-            console.log('Token expired');
-            await clearToken();
-            router.replace('../index');
-            return;
-          }
-          setUserInfo(decoded);
-          console.log('Decoded user info:', decoded);
-        } catch (decodeError) {
-          console.error('Invalid token format:', decodeError);
-          await clearToken();
-          router.replace('../index');
-        }
+        
+        setUserInfo(user);
+        
+        // Lấy quyền hạn dựa trên vai trò
+        const userPermissions = getPermissionsByRole(user.ChucVuNV);
+        setPermissions(userPermissions);
+        
       } catch (error) {
-        console.error('Error getting token:', error);
-        await clearToken();
+        console.error('Lỗi khi lấy thông tin người dùng:', error);
+        await logout();
         router.replace('../index');
       }
     };
 
-    getUserFromToken();
+    fetchUserInfo();
   }, []);
 
   const screenWidth = Dimensions.get('window').width;
   const containerWidth = screenWidth * 0.9;
   const buttonWidth = (containerWidth - 40) / 3;
 
-  const baseMenuItems: { title: string; icon: "list-alt" | "coffee" | "file-text-o" | "cutlery" | "book" | "bar-chart"; screen: string; onPress: () => void }[] = [
+  // Danh sách các chức năng cơ bản mà tất cả người dùng đều thấy
+  const baseMenuItems: { 
+    title: string; 
+    icon: string; 
+    screen: string; 
+    onPress: () => void 
+  }[] = [
     { title: 'Tạo Order', icon: 'list-alt', screen: 'CreateOrderScreen', onPress: () => router.push('./createorder/CreateOrderScreen') },
     { title: 'Quản lý nguyên liệu', icon: 'coffee', screen: 'IngredientScreen', onPress: () => router.push('./ingredient/IngredientScreen') },
-    { title: 'Quản lý hóa đơn', icon: 'file-text-o', screen: 'OrderScreen', onPress: () => router.push('./OrderScreen') },
+    { title: 'Quản lý hóa đơn', icon: 'file-text-o', screen: 'BillScreen', onPress: () => router.push('./bill/hoadon') },
     { title: 'Quản lý menu', icon: 'cutlery', screen: 'MenuScreen', onPress: () => router.push('./MenuScreen') },
     { title: 'Quản lý sách', icon: 'book', screen: 'BookScreen', onPress: () => router.push('./book/BookScreen') },
     { title: 'Quản lý chấm công', icon: 'bar-chart', screen: 'AttendanceScreen', onPress: () => router.push('./AttendanceScreen') }
   ];
 
-  const managerMenuItems: { title: string; icon: "users" | "line-chart" | "ticket"; screen: string; onPress: () => void }[] = [
+  // Danh sách các chức năng chỉ dành cho quản lý
+  const managerMenuItems: { 
+    title: string; 
+    icon: string; 
+    screen: string; 
+    onPress: () => void 
+  }[] = [
     { title: 'Quản lý nhân viên', icon: 'users', screen: 'StaffScreen', onPress: () => router.push('./staff/StaffScreen') },
     { title: 'Quản lý thống kê', icon: 'line-chart', screen: 'StatisticsScreen', onPress: () => router.push('./statistics/StatisticsScreen') },
     { title: 'Quản lý voucher', icon: 'ticket', screen: 'VoucherScreen', onPress: () => router.push('./voucher/VoucherScreen') }
   ];
 
+  // Hiển thị menu dựa trên vai trò người dùng
   const menuItems = userInfo?.ChucVuNV === ROLE.MANAGER
     ? [...baseMenuItems, ...managerMenuItems]
     : baseMenuItems;
 
-  // console.log('User role:', userInfo?.ChucVuNV);
-  // console.log('Menu items:', menuItems);
-
   const handleLogout = async () => {
     try {
-      if (Platform.OS === 'web') {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-      } else {
-        await SecureStore.deleteItemAsync('access_token');
-        await SecureStore.deleteItemAsync('refresh_token');
-      }
+      await logout();
       router.replace('/');
     } catch (error) {
-      console.error('Error logging out:', error);
+      console.error('Lỗi khi đăng xuất:', error);
+      Alert.alert('Lỗi', 'Không thể đăng xuất, vui lòng thử lại');
     }
   };
 
@@ -150,7 +124,7 @@ const HomeScreen = () => {
             style={[styles.menuButton, { width: buttonWidth }]}
             onPress={item.onPress}
           >
-            <FontAwesome name={item.icon} size={30} color="#000" />
+            <FontAwesome name={item.icon as any} size={30} color="#000" />
             <Text style={styles.buttonText}>{item.title}</Text>
           </TouchableOpacity>
         ))}

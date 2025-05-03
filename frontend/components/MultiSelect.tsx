@@ -53,6 +53,12 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   const selectedItems = items.filter(item => selectedIds.includes(item.id));
   const selectedLabels = selectedItems.map(item => item.label).join(', ');
 
+  const theLoaiItems = items.map(item => ({
+    id: item.id,
+    label: item.label
+  }));
+  console.log('theLoaiItems:', theLoaiItems);
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>

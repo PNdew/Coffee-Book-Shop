@@ -29,16 +29,29 @@ export default function SuaSachScreen() {
 
   // Lấy thông tin sách và danh sách thể loại khi component được mount
   useEffect(() => {
-    Promise.all([
-      fetchBookDetails(),
-      fetchTheLoai()
-    ]);
+    const loadData = async () => {
+      try {
+        await fetchTheLoai(); // Gọi riêng trước để đảm bảo có dữ liệu thể loại
+        await fetchBookDetails();
+      } catch (err) {
+        console.error('Lỗi khi tải dữ liệu:', err);
+        setError('Không thể tải dữ liệu. Vui lòng thử lại!');
+      }
+    };
+    
+    loadData();
   }, [bookId]);
 
   const fetchTheLoai = async () => {
     try {
       setLoadingTheLoai(true);
       const data = await theLoaiService.getAllTheLoai();
+      console.log('Danh sách thể loại từ API:', data);
+      
+      if (!data || data.length === 0) {
+        console.warn('API trả về danh sách thể loại rỗng');
+      }
+      
       setDanhSachTheLoai(data || []);
     } catch (err) {
       console.error('Lỗi khi lấy danh sách thể loại:', err);
@@ -60,10 +73,15 @@ export default function SuaSachScreen() {
       setSoLuong(bookData.so_luong_sach ? bookData.so_luong_sach.toString() : '0');
       setTrangThai(bookData.trang_thai || 'Còn');
       
-      // Cập nhật danh sách thể loại đã chọn
+      // Cập nhật danh sách thể loại đã chọn - Sửa lại phần này
       if (bookData.the_loai_list && Array.isArray(bookData.the_loai_list)) {
+        console.log('Thể loại từ dữ liệu sách:', bookData.the_loai_list);
         const theLoaiIds = bookData.the_loai_list.map((item: TheLoai) => item.id);
+        console.log('Danh sách ID thể loại được chọn:', theLoaiIds);
         setSelectedTheLoaiIds(theLoaiIds);
+      } else {
+        console.log('Không có dữ liệu thể loại hoặc dữ liệu không phải mảng');
+        setSelectedTheLoaiIds([]);
       }
       
       setError(null);

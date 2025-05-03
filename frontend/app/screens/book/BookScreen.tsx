@@ -1,23 +1,45 @@
 import React from 'react';
-import { StyleSheet, TextInput, FlatList, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native';
+import { StyleSheet, TextInput, FlatList, TouchableOpacity, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Text, View } from '@/components/Themed';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { bookService, Book } from '@/services/bookapi';
 import AlertDialog from '@/components/AlertDialog';
+import { getUserFromToken, getPermissionsByRole } from '../../../services/authapi';
+import type { Permissions } from '../../../services/authapi';
 
 export default function SachScreen() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const router = useRouter();
-  const { refresh } = useLocalSearchParams();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState<Permissions>({
+    canView: true,
+    canAdd: false,
+    canEdit: false,
+    canDelete: false
+  });
+  
+  const router = useRouter();
+  const { refresh } = useLocalSearchParams();
 
   useEffect(() => {
+    // Lấy thông tin quyền hạn
+    const getPermissions = async () => {
+      try {
+        const user = await getUserFromToken();
+        if (user) {
+          setPermissions(getPermissionsByRole(user.ChucVuNV));
+        }
+      } catch (error) {
+        console.error('Lỗi khi lấy quyền hạn:', error);
+      }
+    };
+    
+    getPermissions();
     fetchBooks();
   }, [refresh]);
 
@@ -46,16 +68,29 @@ export default function SachScreen() {
   );
 
   const handleBookPress = (id: string) => {
-    router.push(`../suasach?id=${id}`);
+    // Chỉ cho phép xem hoặc sửa sách nếu có quyền
+    if (permissions.canEdit) {
+      router.push(`./suasach?id=${id}`);
+    } else {
+      // Nếu chỉ có quyền xem, hiển thị thông báo
+      Alert.alert(
+        "Thông báo", 
+        "Bạn chỉ có quyền xem thông tin sách, không thể chỉnh sửa.",
+        [{ text: "Đã hiểu" }]
+      );
+    }
   };
 
   const handleLongPress = (id: string) => {
-    setSelectedBookId(id);
-    setShowDeleteDialog(true);
+    // Chỉ hiển thị dialog xóa nếu có quyền xóa
+    if (permissions.canDelete) {
+      setSelectedBookId(id);
+      setShowDeleteDialog(true);
+    }
   };
 
   const handleDeleteConfirm = async () => {
-    if (!selectedBookId) return;
+    if (!selectedBookId || !permissions.canDelete) return;
     
     try {
       await bookService.deleteBook(selectedBookId);
@@ -64,7 +99,7 @@ export default function SachScreen() {
       setSelectedBookId(null);
     } catch (error) {
       console.error('Lỗi khi xóa sách:', error);
-      // Có thể thêm thông báo lỗi ở đây
+      Alert.alert("Lỗi", "Không thể xóa sách, vui lòng thử lại sau");
     }
   };
 
@@ -130,13 +165,36 @@ export default function SachScreen() {
               <TouchableOpacity 
                 style={styles.bookItem}
                 onPress={() => handleBookPress(item.id.toString())}
-                onLongPress={() => handleLongPress(item.id.toString())}
+                onLongPress={() => permissions.canDelete && handleLongPress(item.id.toString())}
               >
                 <Text style={styles.bookName}>{item.ten_sach}</Text>
                 <Text style={styles.bookAuthor}>Tác giả: {item.tac_gia}</Text>
                 <Text style={styles.bookDetails}>
                   Thể loại: {renderTheLoai(item)} | Số lượng: {item.so_luong_sach}
                 </Text>
+                
+                {/* Hiển thị các nút tùy theo quyền */}
+                {permissions.canEdit && (
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity 
+                      style={styles.editButton}
+                      onPress={() => router.push(`./suasach?id=${item.id}`)}
+                    >
+                      <FontAwesome name="edit" size={16} color="#007bff" />
+                      <Text style={styles.editButtonText}>Sửa</Text>
+                    </TouchableOpacity>
+                    
+                    {permissions.canDelete && (
+                      <TouchableOpacity 
+                        style={styles.deleteButton}
+                        onPress={() => handleLongPress(item.id.toString())}
+                      >
+                        <FontAwesome name="trash" size={16} color="#dc3545" />
+                        <Text style={styles.deleteButtonText}>Xóa</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
               </TouchableOpacity>
             )}
             contentContainerStyle={styles.listContent}
@@ -152,12 +210,15 @@ export default function SachScreen() {
         </>
       )}
 
-      <TouchableOpacity 
-        style={styles.addButton}
-        onPress={() => router.push('../themsach')}
-      >
-        <Text style={styles.addButtonText}>Thêm sách</Text>
-      </TouchableOpacity>
+      {/* Chỉ hiển thị nút thêm sách nếu có quyền thêm */}
+      {permissions.canAdd && (
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => router.push('./themsach')}
+        >
+          <Text style={styles.addButtonText}>Thêm sách</Text>
+        </TouchableOpacity>
+      )}
 
       <AlertDialog
         visible={showDeleteDialog}
@@ -311,5 +372,37 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#666',
     marginLeft: 5,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e7f3ff',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  editButtonText: {
+    color: '#007bff',
+    marginLeft: 4,
+    fontSize: 12,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffebee',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+  },
+  deleteButtonText: {
+    color: '#dc3545',
+    marginLeft: 4,
+    fontSize: 12,
   },
 });
