@@ -55,7 +55,7 @@ export default function NguyenLieuScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Link href="./" asChild>
+        <Link href="../" asChild>
           <Pressable style={styles.backButton}>
             <FontAwesome name="arrow-left" size={20} color="black" />
           </Pressable>

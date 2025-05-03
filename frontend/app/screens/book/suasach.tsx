@@ -3,8 +3,9 @@ import { Text, View } from '@/components/Themed';
 import { StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
-import { bookService } from '@/services/bookapi';
+import { bookService, theLoaiService, TheLoai } from '@/services/bookapi';
 import AlertDialog from '@/components/AlertDialog';
+import MultiSelect from '@/components/MultiSelect';
 
 export default function SuaSachScreen() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function SuaSachScreen() {
   const bookId = id as string;
 
   const [loading, setLoading] = useState(true);
+  const [loadingTheLoai, setLoadingTheLoai] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -20,14 +22,30 @@ export default function SuaSachScreen() {
   // State cho các trường dữ liệu
   const [tenSach, setTenSach] = useState('');
   const [tacGia, setTacGia] = useState('');
-  const [theLoai, setTheLoai] = useState('');
+  const [selectedTheLoaiIds, setSelectedTheLoaiIds] = useState<number[]>([]);
   const [soLuong, setSoLuong] = useState('');
   const [trangThai, setTrangThai] = useState('Còn');
+  const [danhSachTheLoai, setDanhSachTheLoai] = useState<TheLoai[]>([]);
 
-  // Lấy thông tin sách khi component được mount
+  // Lấy thông tin sách và danh sách thể loại khi component được mount
   useEffect(() => {
-    fetchBookDetails();
+    Promise.all([
+      fetchBookDetails(),
+      fetchTheLoai()
+    ]);
   }, [bookId]);
+
+  const fetchTheLoai = async () => {
+    try {
+      setLoadingTheLoai(true);
+      const data = await theLoaiService.getAllTheLoai();
+      setDanhSachTheLoai(data || []);
+    } catch (err) {
+      console.error('Lỗi khi lấy danh sách thể loại:', err);
+    } finally {
+      setLoadingTheLoai(false);
+    }
+  };
 
   const fetchBookDetails = async () => {
     try {
@@ -39,9 +57,14 @@ export default function SuaSachScreen() {
       // Cập nhật state từ dữ liệu lấy được, kiểm tra undefined
       setTenSach(bookData.ten_sach || '');
       setTacGia(bookData.tac_gia || '');
-      setTheLoai(bookData.the_loai || '');
       setSoLuong(bookData.so_luong_sach ? bookData.so_luong_sach.toString() : '0');
       setTrangThai(bookData.trang_thai || 'Còn');
+      
+      // Cập nhật danh sách thể loại đã chọn
+      if (bookData.the_loai_list && Array.isArray(bookData.the_loai_list)) {
+        const theLoaiIds = bookData.the_loai_list.map((item: TheLoai) => item.id);
+        setSelectedTheLoaiIds(theLoaiIds);
+      }
       
       setError(null);
     } catch (err) {
@@ -56,7 +79,6 @@ export default function SuaSachScreen() {
   const validateForm = () => {
     if (!tenSach.trim()) return 'Tên sách không được để trống';
     if (!tacGia.trim()) return 'Tác giả không được để trống';
-    //if (!theLoai.trim()) return 'Thể loại không được để trống';
     if (!soLuong.trim() || isNaN(Number(soLuong))) return 'Số lượng phải là số';
     return null;
   };
@@ -77,9 +99,9 @@ export default function SuaSachScreen() {
       const bookData = {
         ten_sach: tenSach,
         tac_gia: tacGia,
-        the_loai: theLoai,
         so_luong_sach: Number(soLuong),
-        trang_thai: trangThai
+        trang_thai: trangThai,
+        the_loai_ids: selectedTheLoaiIds
       };
 
       await bookService.updateBook(bookId, bookData);
@@ -88,7 +110,7 @@ export default function SuaSachScreen() {
       // Điều hướng về trang danh sách sau 1.5 giây
       setTimeout(() => {
         router.push({
-          pathname: './BookScreen',
+          pathname: '../sach',
           params: { refresh: Date.now().toString() }
         });
       }, 1500);
@@ -107,7 +129,7 @@ export default function SuaSachScreen() {
       
       // Điều hướng về trang danh sách sau khi xóa
       router.push({
-        pathname: './BookScreen',
+        pathname: '../sach',
         params: { refresh: Date.now().toString() }
       });
     } catch (err) {
@@ -117,10 +139,16 @@ export default function SuaSachScreen() {
     }
   };
 
+  // Chuyển đổi danh sách thể loại sang định dạng cho MultiSelect
+  const theLoaiItems = danhSachTheLoai.map(item => ({
+    id: item.id,
+    label: item.ten_the_loai
+  }));
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Link href="./BookScreen" asChild>
+        <Link href="../sach" asChild>
           <Pressable style={styles.backButton}>
             <FontAwesome name="arrow-left" size={20} color="black" />
           </Pressable>
@@ -175,13 +203,24 @@ export default function SuaSachScreen() {
           </View>
 
           <View style={styles.formSection}>
-            <Text style={styles.label}>Thể loại *</Text>
-            <TextInput
-              style={styles.input}
-              value={theLoai}
-              onChangeText={setTheLoai}
-              placeholder="Nhập thể loại sách"
-            />
+            {loadingTheLoai ? (
+              <View>
+                <Text style={styles.label}>Thể loại *</Text>
+                <View style={[styles.input, styles.loadingTheLoaiContainer]}>
+                  <ActivityIndicator size="small" color="#E4434A" />
+                  <Text style={styles.loadingTheLoaiText}>Đang tải thể loại...</Text>
+                </View>
+              </View>
+            ) : (
+              <MultiSelect
+                label="Thể loại"
+                items={theLoaiItems}
+                selectedIds={selectedTheLoaiIds}
+                onSelectedItemsChange={setSelectedTheLoaiIds}
+                placeholder="Chọn thể loại sách"
+                required={true}
+              />
+            )}
           </View>
 
           <View style={styles.formSection}>
@@ -252,7 +291,7 @@ export default function SuaSachScreen() {
             {saving ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.buttonText}>Cập nhật</Text>
+              <Text style={styles.buttonText}>Lưu</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -261,7 +300,7 @@ export default function SuaSachScreen() {
       <AlertDialog
         visible={showDeleteDialog}
         title="Xác nhận xóa"
-        message="Bạn có chắc chắn muốn xóa sách này không?"
+        message="Bạn có chắc chắn muốn xóa sách này?"
         confirmText="Xóa"
         cancelText="Hủy"
         onConfirm={handleDeleteBook}
@@ -305,16 +344,6 @@ const styles = StyleSheet.create({
     width: 30,
     alignItems: 'center',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#555',
-  },
   formContainer: {
     flex: 1,
   },
@@ -348,67 +377,96 @@ const styles = StyleSheet.create({
     width: 20,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#777',
-    marginRight: 5,
+    borderColor: '#666',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioSelected: {
+    backgroundColor: '#E4434A',
+    borderColor: '#E4434A',
+  },
+  radioLabel: {
+    marginLeft: 8,
+    fontSize: 14,
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  radioSelected: {
-    borderColor: '#E4434A',
-    backgroundColor: '#E4434A',
-  },
-  radioLabel: {
+  loadingText: {
+    marginTop: 10,
     fontSize: 14,
+    color: '#666',
+  },
+  loadingTheLoaiContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingTheLoaiText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 15,
+    backgroundColor: '#F3F3E7',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  updateButton: {
+    flex: 3,
+    backgroundColor: '#E4434A',
+    borderRadius: 5,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButton: {
+    flex: 1,
+    backgroundColor: '#707070',
+    borderRadius: 5,
+    marginRight: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  disabledButton: {
+    opacity: 0.7,
   },
   errorContainer: {
-    backgroundColor: '#ffebee',
+    backgroundColor: '#FFE8E8',
+    borderWidth: 1,
+    borderColor: '#FFD0D0',
     padding: 10,
     borderRadius: 5,
     marginBottom: 15,
   },
   errorText: {
-    color: '#d32f2f',
-    textAlign: 'center',
+    color: '#D63031',
+    fontSize: 14,
   },
   successContainer: {
-    backgroundColor: '#e8f5e9',
+    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
     padding: 10,
     borderRadius: 5,
     marginBottom: 15,
   },
   successText: {
-    color: '#388e3c',
-    textAlign: 'center',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-  },
-  deleteButton: {
-    backgroundColor: '#cccccc',
-    borderRadius: 5,
-    padding: 12,
-    flex: 1,
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  updateButton: {
-    backgroundColor: '#E4434A',
-    borderRadius: 5,
-    padding: 12,
-    flex: 1,
-    alignItems: 'center',
-    marginLeft: 10,
-  },
-  disabledButton: {
-    backgroundColor: '#cccccc',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+    color: '#2E7D32',
+    fontSize: 14,
+  }
 });

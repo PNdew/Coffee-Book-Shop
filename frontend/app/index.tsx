@@ -40,7 +40,7 @@ const LoginScreen = () => {
       Alert.alert("Đăng nhập thành công");
 
       // Điều hướng đến trang Home
-      // router.push("./screens/HomeScreen");
+      router.push("./screens/HomeScreen");
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         console.log("Lỗi", error.response.data || "Sai tài khoản hoặc mật khẩu")

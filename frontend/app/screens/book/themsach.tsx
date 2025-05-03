@@ -1,23 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Text, View } from '@/components/Themed';
 import { StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
-import { bookService } from '@/services/bookapi';
+import { bookService, theLoaiService, TheLoai } from '@/services/bookapi';
+import MultiSelect from '@/components/MultiSelect';
 
 export default function ThemSachScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [loadingTheLoai, setLoadingTheLoai] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   // State cho các trường dữ liệu
   const [tenSach, setTenSach] = useState('');
   const [tacGia, setTacGia] = useState('');
-  const [theLoai, setTheLoai] = useState('');
+  const [selectedTheLoaiIds, setSelectedTheLoaiIds] = useState<number[]>([]);
   const [soLuong, setSoLuong] = useState('');
   const [trangThai, setTrangThai] = useState('Còn');
-  const [maSach, setMaSach] = useState('');
+  const [danhSachTheLoai, setDanhSachTheLoai] = useState<TheLoai[]>([]);
+
+  // Lấy danh sách thể loại khi component được mount
+  useEffect(() => {
+    fetchTheLoai();
+  }, []);
+
+  const fetchTheLoai = async () => {
+    try {
+      setLoadingTheLoai(true);
+      const data = await theLoaiService.getAllTheLoai();
+      setDanhSachTheLoai(data || []);
+    } catch (err) {
+      console.error('Lỗi khi lấy danh sách thể loại:', err);
+    } finally {
+      setLoadingTheLoai(false);
+    }
+  };
 
   // Kiểm tra form trước khi gửi
   const validateForm = () => {
@@ -25,7 +44,7 @@ export default function ThemSachScreen() {
     if (!tacGia.trim()) return 'Tác giả không được để trống';
     //if (!theLoai.trim()) return 'Thể loại không được để trống';
     if (!soLuong.trim() || isNaN(Number(soLuong))) return 'Số lượng phải là số';
-    // if (!maSach.trim()) return 'Mã sách không được để trống';
+    //if (!maSach.trim()) return 'Mã sách không được để trống';
     return null;
   };
 
@@ -45,9 +64,9 @@ export default function ThemSachScreen() {
       const bookData = {
         ten_sach: tenSach,
         tac_gia: tacGia,
-        the_loai: theLoai,
         so_luong_sach: Number(soLuong),
         trang_thai: trangThai,
+        the_loai_ids: selectedTheLoaiIds
       };
 
       await bookService.addBook(bookData);
@@ -56,7 +75,7 @@ export default function ThemSachScreen() {
       // Điều hướng về trang danh sách sau khi thêm thành công
       setTimeout(() => {
         router.push({
-          pathname: './BookScreen',
+          pathname: '../sach',
           params: { refresh: Date.now().toString() }
         });
       }, 1500);
@@ -68,10 +87,16 @@ export default function ThemSachScreen() {
     }
   };
 
+  // Chuyển đổi danh sách thể loại sang định dạng cho MultiSelect
+  const theLoaiItems = danhSachTheLoai.map(item => ({
+    id: item.id,
+    label: item.ten_the_loai
+  }));
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Link href="./BookScreen" asChild>
+        <Link href="../sach" asChild>
           <Pressable style={styles.backButton}>
             <FontAwesome name="arrow-left" size={20} color="black" />
           </Pressable>
@@ -118,13 +143,24 @@ export default function ThemSachScreen() {
         </View>
 
         <View style={styles.formSection}>
-          <Text style={styles.label}>Thể loại *</Text>
-          <TextInput
-            style={styles.input}
-            value={theLoai}
-            onChangeText={setTheLoai}
-            placeholder="Nhập thể loại sách"
-          />
+          {loadingTheLoai ? (
+            <View>
+              <Text style={styles.label}>Thể loại *</Text>
+              <View style={[styles.input, styles.loadingContainer]}>
+                <ActivityIndicator size="small" color="#E4434A" />
+                <Text style={styles.loadingText}>Đang tải thể loại...</Text>
+              </View>
+            </View>
+          ) : (
+            <MultiSelect
+              label="Thể loại"
+              items={theLoaiItems}
+              selectedIds={selectedTheLoaiIds}
+              onSelectedItemsChange={setSelectedTheLoaiIds}
+              placeholder="Chọn thể loại sách"
+              required={true}
+            />
+          )}
         </View>
 
         <View style={styles.formSection}>
@@ -252,52 +288,67 @@ const styles = StyleSheet.create({
     width: 20,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#777',
-    marginRight: 5,
-    justifyContent: 'center',
+    borderColor: '#666',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   radioSelected: {
-    borderColor: '#E4434A',
     backgroundColor: '#E4434A',
+    borderColor: '#E4434A',
   },
   radioLabel: {
+    marginLeft: 8,
     fontSize: 14,
   },
+  saveButton: {
+    backgroundColor: '#E4434A',
+    borderRadius: 5,
+    height: 45,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    marginBottom: 30,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  disabledButton: {
+    opacity: 0.7,
+  },
   errorContainer: {
-    backgroundColor: '#ffebee',
+    backgroundColor: '#FFE8E8',
+    borderWidth: 1,
+    borderColor: '#FFD0D0',
     padding: 10,
     borderRadius: 5,
     marginBottom: 15,
   },
   errorText: {
-    color: '#d32f2f',
-    textAlign: 'center',
+    color: '#D63031',
+    fontSize: 14,
   },
   successContainer: {
-    backgroundColor: '#e8f5e9',
+    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
     padding: 10,
     borderRadius: 5,
     marginBottom: 15,
   },
   successText: {
-    color: '#388e3c',
-    textAlign: 'center',
+    color: '#2E7D32',
+    fontSize: 14,
   },
-  saveButton: {
-    backgroundColor: '#E4434A',
-    borderRadius: 5,
-    padding: 12,
+  loadingContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 20,
+    justifyContent: 'center',
   },
-  disabledButton: {
-    backgroundColor: '#cccccc',
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  loadingText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#666',
+  }
 });

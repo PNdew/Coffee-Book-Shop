@@ -46,7 +46,7 @@ export default function SachScreen() {
   );
 
   const handleBookPress = (id: string) => {
-    router.push(`./suasach?id=${id}`);
+    router.push(`../suasach?id=${id}`);
   };
 
   const handleLongPress = (id: string) => {
@@ -66,6 +66,14 @@ export default function SachScreen() {
       console.error('Lỗi khi xóa sách:', error);
       // Có thể thêm thông báo lỗi ở đây
     }
+  };
+
+  // Hàm hiển thị danh sách thể loại của sách
+  const renderTheLoai = (book: Book) => {
+    if (book.the_loai_list && book.the_loai_list.length > 0) {
+      return book.the_loai_list.map(tl => tl.ten_the_loai).join(', ');
+    }
+    return 'Chưa phân loại';
   };
 
   // Component trống để thêm vào cuối danh sách, tạo khoảng trống
@@ -127,7 +135,7 @@ export default function SachScreen() {
                 <Text style={styles.bookName}>{item.ten_sach}</Text>
                 <Text style={styles.bookAuthor}>Tác giả: {item.tac_gia}</Text>
                 <Text style={styles.bookDetails}>
-                  Thể loại: {item.the_loai} | Số lượng: {item.so_luong_sach}
+                  Thể loại: {renderTheLoai(item)} | Số lượng: {item.so_luong_sach}
                 </Text>
               </TouchableOpacity>
             )}
@@ -146,7 +154,7 @@ export default function SachScreen() {
 
       <TouchableOpacity 
         style={styles.addButton}
-        onPress={() => router.push('./themsach')}
+        onPress={() => router.push('../themsach')}
       >
         <Text style={styles.addButtonText}>Thêm sách</Text>
       </TouchableOpacity>
