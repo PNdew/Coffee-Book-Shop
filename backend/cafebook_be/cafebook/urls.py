@@ -6,7 +6,7 @@ from .views.getProduct import (SanphamViewSet, VoucherViewSet, DonghoadonViewSet
 from .views.ingredient import NguyenLieuViewSet  # Import viewset cho nguyên liệu
 from .views.book import SachViewSet, TheLoaiViewSet  # Import viewset cho sách
 from .views.attendance import check_attendance  # Import hàm chấm công
-from .views.auth import LoginView
+from .views.staff import NhanVienViewSet, ChucVuViewSet  # Import viewset cho nhân viên và chức vụ
 
 router = DefaultRouter()
 router.register(r'sanpham', SanphamViewSet)
@@ -16,6 +16,8 @@ router.register(r'hoadon', HoadonViewSet)
 router.register(r'nguyenlieu', NguyenLieuViewSet)  
 router.register(r'sach', SachViewSet)
 router.register(r'theloai', TheLoaiViewSet)
+router.register(r'nhanvien', NhanVienViewSet)  # Thêm router cho nhân viên
+router.register(r'chucvu', ChucVuViewSet)  # Thêm router cho chức vụ
 
 urlpatterns = [
     path("login/", login_view),
@@ -23,6 +25,5 @@ urlpatterns = [
     path("order/create/", createOrder, name="create_order"),
     path("order/details/", createOrderDetails, name="create_order_line"),
     path("", include(router.urls)),
-    path('auth/login/', LoginView.as_view(), name='login'),
 ]
 
