@@ -25,6 +25,7 @@ const HomeScreen = () => {
     const fetchUserInfo = async () => {
       try {
         const user = await getUserFromToken();
+        console.log("User info từ token:", user); // Thêm log để debug
         
         if (!user) {
           await logout();
@@ -105,9 +106,17 @@ const HomeScreen = () => {
             Vị trí: {userInfo?.ChucVuNV === ROLE.MANAGER ? 'Quản lý' : 'Nhân viên'}
           </Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Đăng xuất</Text>
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            onPress={() => router.push('./auth/ChangePasswordScreen')} 
+            style={styles.changePasswordButton}
+          >
+            <Text style={styles.changePasswordText}>Đổi mật khẩu</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+            <Text style={styles.logoutText}>Đăng xuất</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Image source={require('@/assets/images/logo.png')} style={styles.logo} />
@@ -210,6 +219,21 @@ const styles = StyleSheet.create({
   },
   userInfoContainer: {
     flex: 1,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  changePasswordButton: {
+    marginRight: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    backgroundColor: '#007bff',
+    borderRadius: 5,
+  },
+  changePasswordText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   logoutButton: {
     padding: 10,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
-import { Ionicons, FontAwesome } from '@expo/vector-icons';
+import { Ionicons, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { getNhanVien, NhanVien } from '../../../services/staffapi';
 import { getUserFromToken } from '../../../services/authapi';
@@ -143,6 +143,13 @@ export default function StaffScreen() {
           <Text style={styles.buttonText}>Bảng chấm công</Text>
         </TouchableOpacity>
       </View>
+      
+      <TouchableOpacity 
+        style={styles.addButton}
+        onPress={() => router.push('/screens/staff/RegisterStaffScreen')}
+      >
+        <MaterialIcons name="person-add" size={24} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -260,6 +267,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flex: 1,
     marginLeft: 5,
+  },
+  addButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 70,
+    backgroundColor: '#FF8F8F',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   buttonText: {
     color: '#000',

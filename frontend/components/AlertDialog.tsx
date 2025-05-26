@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Modal, TouchableOpacity, View, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons'; // Thêm import này nếu chưa có
 
 interface AlertDialogProps {
   visible: boolean;
@@ -9,6 +10,7 @@ interface AlertDialogProps {
   cancelText: string;
   onConfirm: () => void;
   onCancel: () => void;
+  isSuccess?: boolean; // Thêm prop này
 }
 
 export default function AlertDialog({
@@ -18,7 +20,8 @@ export default function AlertDialog({
   confirmText, 
   cancelText, 
   onConfirm, 
-  onCancel
+  onCancel,
+  isSuccess = false // Mặc định là false
 }: AlertDialogProps) {
   return (
     <Modal
@@ -29,19 +32,34 @@ export default function AlertDialog({
     >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
+          {/* Icon thành công/thất bại */}
+          <View style={[styles.iconContainer, isSuccess ? styles.successIconContainer : styles.errorIconContainer]}>
+            <Ionicons 
+              name={isSuccess ? "checkmark-circle" : "alert-circle"} 
+              size={40} 
+              color="white" 
+            />
+          </View>
+          
           <Text style={styles.modalTitle}>{title}</Text>
           <Text style={styles.modalText}>{message}</Text>
           
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={onCancel}
-            >
-              <Text style={styles.cancelButtonText}>{cancelText}</Text>
-            </TouchableOpacity>
+            {cancelText ? (
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={onCancel}
+              >
+                <Text style={styles.cancelButtonText}>{cancelText}</Text>
+              </TouchableOpacity>
+            ) : null}
             
             <TouchableOpacity
-              style={[styles.button, styles.confirmButton]}
+              style={[
+                styles.button, 
+                isSuccess ? styles.successButton : styles.confirmButton,
+                !cancelText && { flex: 1 } // Nếu không có nút hủy, cho nút xác nhận chiếm hết chiều rộng
+              ]}
               onPress={onConfirm}
             >
               <Text style={styles.confirmButtonText}>{confirmText}</Text>
@@ -65,6 +83,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 10,
     padding: 20,
+    paddingTop: 30, // Thêm padding trên để cho icon
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -73,6 +93,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
+  },
+  iconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  successIconContainer: {
+    backgroundColor: '#4CAF50', // Màu xanh lá cho thành công
+  },
+  errorIconContainer: {
+    backgroundColor: '#E4434A', // Màu đỏ cho lỗi
   },
   modalTitle: {
     fontSize: 18,
@@ -88,6 +122,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    width: '100%',
   },
   button: {
     flex: 1,
@@ -100,7 +135,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#cccccc',
   },
   confirmButton: {
-    backgroundColor: '#E4434A',
+    backgroundColor: '#E4434A', // Màu đỏ cho nút xác nhận khi lỗi
+  },
+  successButton: {
+    backgroundColor: '#4CAF50', // Màu xanh lá cho nút xác nhận khi thành công
   },
   cancelButtonText: {
     color: '#000',

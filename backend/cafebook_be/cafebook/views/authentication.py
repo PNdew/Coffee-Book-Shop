@@ -1,5 +1,7 @@
 import os
+import jwt
 from django.db import connection
+from django.conf import settings
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
@@ -29,15 +31,21 @@ def login_view(request):
         SDTNV = request.data.get('phone')
     if not MatKhau:
         MatKhau = request.data.get('password')
+        
+    print(f"DEBUG LOGIN: SDTNV={SDTNV}, MatKhau={MatKhau}")
 
     if not SDTNV or not MatKhau:
         return Response({"success": False, "error": "Vui lòng nhập số điện thoại và mật khẩu."}, 
                        status=status.HTTP_400_BAD_REQUEST)
 
     try:
+        # Thêm log để debug
+        print(f"Trước khi truy vấn database với SDTNV={SDTNV}")
+        
         with connection.cursor() as cursor:
             cursor.execute("SELECT * FROM taikhoan WHERE SDTNV = %s", [SDTNV])
             tai_khoan = dictfetchone(cursor)
+            print(f"Kết quả tài khoản: {tai_khoan}")
 
         if tai_khoan is None:
             return Response({"success": False, "message": "Tài khoản không tồn tại"}, 
@@ -58,11 +66,21 @@ def login_view(request):
         # Xác định quyền hạn dựa trên chức vụ
         is_admin = nhan_vien['IDChucVu'] == "1"  # "1" là mã của quản lý
         
-        # Sử dụng JWT Handler  
-        jwt_handler = JWTHandler()
-        access_token = jwt_handler.generate_access_token(nhan_vien)
-        refresh_token = jwt_handler.generate_refresh_token(SDTNV)
-
+        # Tạo JWT token - đảm bảo bao gồm tên người dùng
+        payload = {
+            'SDTNV': nhan_vien['SDTNV'],  # Số điện thoại
+            'ChucVuNV': nhan_vien['IDChucVu'],  # ID chức vụ 
+            'TenNV': nhan_vien['TenNV'],  # Thêm tên người dùng vào payload
+            'exp': datetime.utcnow() + timedelta(days=1)  # Token hết hạn sau 1 ngày
+        }
+        
+        # Sử dụng SECRET_KEY và JWT_ALGORITHM từ settings
+        algorithm = getattr(settings, 'JWT_ALGORITHM', 'HS256')
+        token = jwt.encode(payload, settings.SECRET_KEY, algorithm=algorithm)
+        
+        print(f">>> Generated token: {token[:20]}...")
+        print(f">>> Token payload: {payload}")
+        
         # Trả về cả thông tin người dùng và quyền hạn tương tự auth.py
         return Response({
             "success": True,
@@ -80,10 +98,18 @@ def login_view(request):
                 }
             },
             "message": f"Đăng nhập thành công, chào {nhan_vien['TenNV']}",
-            "access": access_token,
-            "refresh": refresh_token,
+            "access": token,
+            "refresh": token,
         }, status=status.HTTP_200_OK)
 
     except Exception as e:
-        return Response({"success": False, "message": str(e)}, 
-                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Chi tiết lỗi để debug
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"LOGIN ERROR: {str(e)}")
+        print(error_trace)
+        return Response({
+            "success": False, 
+            "message": str(e),
+            "detail": error_trace
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

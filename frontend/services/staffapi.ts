@@ -2,21 +2,20 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-// Sử dụng địa chỉ API_URL từ file khác
-import { API_URL } from './bookapi';
+// Sửa lại: Khai báo trực tiếp thay vì import từ file khác
+export const API_URL = 'http://localhost:8000';
 
-// Interface cho nhân viên
+// Định nghĩa interface NhanVien khớp với backend
 export interface NhanVien {
   IDNhanVien: number;
   TenNV: string;
   SDTNV: string;
   EmailNV?: string;
   CCCDNV: string;
-  ChucVuNV: string;
-  ten_chuc_vu?: string;
+  ChucVuNV: string; // Tương ứng với IDChucVu trong database
 }
 
-// Interface cho chức vụ
+// Định nghĩa interface ChucVu khớp với backend
 export interface ChucVu {
   idchucvu: number;
   loaichucvu: string;
@@ -42,23 +41,25 @@ const getToken = async (): Promise<string | null> => {
 export const getNhanVien = async (chucVu?: string): Promise<NhanVien[]> => {
   try {
     const token = await getToken();
-    console.log('Token:', token); // Debug: Ghi log token
+    console.log('Token:', token);
     
     let url = `${API_URL}/api/nhanvien/`;
     if (chucVu) {
       url += `?chuc_vu=${chucVu}`;
     }
     
-    console.log('URL gọi API:', url); // Debug: Ghi log URL
+    console.log('URL gọi API:', url);
 
-    // Tạm thời bỏ qua xác thực token để kiểm tra lỗi
-    const response = await axios.get<NhanVien[]>(url);
-    console.log('Dữ liệu nhận được:', response.data); // Debug: Ghi log dữ liệu trả về
+    const response = await axios.get<NhanVien[]>(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    console.log('Dữ liệu nhận được:', response.data);
     
     return response.data;
   } catch (error) {
     console.error('Lỗi khi lấy danh sách nhân viên:', error);
-    // Debug: Ghi log chi tiết lỗi
     if (axios.isAxiosError(error)) {
       console.error('Status:', error.response?.status);
       console.error('Data:', error.response?.data);
@@ -71,20 +72,61 @@ export const getNhanVien = async (chucVu?: string): Promise<NhanVien[]> => {
 export const getChucVu = async (): Promise<ChucVu[]> => {
   try {
     const token = await getToken();
-    console.log('Token cho chức vụ:', token); // Debug: Ghi log token
+    console.log('Token cho chức vụ:', token);
     
-    // Tạm thời bỏ qua xác thực token để kiểm tra lỗi
-    const response = await axios.get<ChucVu[]>(`${API_URL}/api/chucvu/`);
-    console.log('Dữ liệu chức vụ:', response.data); // Debug: Ghi log dữ liệu trả về
+    const response = await axios.get<ChucVu[]>(`${API_URL}/api/chucvu/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    console.log('Dữ liệu chức vụ:', response.data);
     
     return response.data;
   } catch (error) {
     console.error('Lỗi khi lấy danh sách chức vụ:', error);
-    // Debug: Ghi log chi tiết lỗi
     if (axios.isAxiosError(error)) {
       console.error('Status:', error.response?.status);
       console.error('Data:', error.response?.data);
     }
     return [];
   }
-}; 
+};
+
+// Interface cho đăng ký nhân viên
+export interface RegisterStaffData {
+  TenNV: string;
+  SDTNV: string;
+  EmailNV?: string;
+  CCCDNV: string;
+  ChucVuNV: string | number;
+  MatKhau: string;
+}
+
+// API đăng ký nhân viên
+export const registerStaff = async (staffData: RegisterStaffData): Promise<any> => {
+  try {
+    const token = await getToken();
+    
+    if (!token) {
+      throw new Error("Không có token, vui lòng đăng nhập lại");
+    }
+    
+    const config = {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    };
+    
+    const response = await axios.post(`${API_URL}/api/staff/register/`, staffData, config);
+    return response.data;
+  } catch (error) {
+    console.error('Lỗi khi đăng ký nhân viên:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Status:', error.response?.status);
+      console.error('Data:', error.response?.data);
+      throw error.response?.data || error.message;
+    }
+    throw error;
+  }
+};

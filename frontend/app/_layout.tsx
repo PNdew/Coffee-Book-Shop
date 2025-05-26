@@ -48,8 +48,13 @@ export default function RootLayout() {
       <Stack.Screen name="screens/book/BookScreen" options={{ headerShown: false }} />
       <Stack.Screen name="screens/AttendanceScreen" options={{ headerShown: false }} />
       <Stack.Screen name="screens/staff/StaffScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/staff/RegisterStaffScreen" options={{ headerShown: false }} />
       <Stack.Screen name="screens/statistics/StatisticsScreen" options={{ headerShown: false }} />
       <Stack.Screen name="screens/voucher/VoucherScreen" options={{ headerShown: false }} />
+      <Stack.Screen 
+        name="screens/auth/ChangePasswordScreen" 
+        options={{ headerShown: false }} 
+      />
     </Stack>
   );
 }
