@@ -1,10 +1,11 @@
 import React from 'react';
-import { StyleSheet, TextInput, FlatList, TouchableOpacity, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, TextInput, FlatList, TouchableOpacity, Pressable, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Text, View } from '@/components/Themed';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { bookService, Book } from '@/services/bookapi';
+import { bookService } from '@/services/bookapi';
+import { Book } from '@/types';
 import AlertDialog from '@/components/AlertDialog';
 import { getUserFromToken, getPermissionsByRole } from '../../../services/authapi';
 import type { Permissions } from '../../../services/authapi';
@@ -22,7 +23,7 @@ export default function SachScreen() {
     canEdit: false,
     canDelete: false
   });
-  
+
   const router = useRouter();
   const { refresh } = useLocalSearchParams();
 
@@ -38,7 +39,7 @@ export default function SachScreen() {
         console.error('Lỗi khi lấy quyền hạn:', error);
       }
     };
-    
+
     getPermissions();
     fetchBooks();
   }, [refresh]);
@@ -46,11 +47,11 @@ export default function SachScreen() {
   const fetchBooks = async () => {
     try {
       setLoading(true);
-      
+
       console.log('Đang kết nối để lấy danh sách sách...');
       const data = await bookService.getAllBooks();
-      console.log('Dữ liệu nhận được:', data);
-      
+      // console.log('Dữ liệu nhận được:', data);
+
       setBooks(data || []);
       setError(null);
     } catch (err) {
@@ -62,7 +63,7 @@ export default function SachScreen() {
     }
   };
 
-  const filteredBooks = books.filter(item => 
+  const filteredBooks = books.filter(item =>
     item.ten_sach.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.tac_gia.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -74,7 +75,7 @@ export default function SachScreen() {
     } else {
       // Nếu chỉ có quyền xem, hiển thị thông báo
       Alert.alert(
-        "Thông báo", 
+        "Thông báo",
         "Bạn chỉ có quyền xem thông tin sách, không thể chỉnh sửa.",
         [{ text: "Đã hiểu" }]
       );
@@ -91,7 +92,7 @@ export default function SachScreen() {
 
   const handleDeleteConfirm = async () => {
     if (!selectedBookId || !permissions.canDelete) return;
-    
+
     try {
       await bookService.deleteBook(selectedBookId);
       setBooks(books.filter(book => book.id.toString() !== selectedBookId));
@@ -117,123 +118,135 @@ export default function SachScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Link href="../" asChild>
-          <Pressable style={styles.backButton}>
-            <FontAwesome name="arrow-left" size={20} color="black" />
-          </Pressable>
-        </Link>
-        <View style={styles.titleWrapper}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>Danh sách sách</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Link href="../" asChild>
+            <Pressable style={styles.backButton}>
+              <FontAwesome name="arrow-left" size={20} color="black" />
+            </Pressable>
+          </Link>
+          <View style={styles.titleWrapper}>
+            <View style={styles.titleContainer}>
+              <Text style={styles.title}>Danh sách sách</Text>
+            </View>
           </View>
-        </View>
-        <TouchableOpacity style={styles.iconContainer} onPress={fetchBooks}>
-          <FontAwesome name="refresh" size={20} color="#666" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <TextInput 
-          style={styles.searchInput} 
-          placeholder="Tìm kiếm theo tên sách, tác giả"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        <FontAwesome name="search" size={16} color="gray" style={styles.searchIcon} />
-      </View>
-      
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#E4434A" />
-          <Text style={styles.loadingText}>Đang tải danh sách sách...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchBooks}>
-            <Text style={styles.retryButtonText}>Thử lại</Text>
+          <TouchableOpacity style={styles.iconContainer} onPress={fetchBooks}>
+            <FontAwesome name="refresh" size={20} color="#666" />
           </TouchableOpacity>
         </View>
-      ) : (
-        <>
-          <FlatList
-            data={filteredBooks}
-            keyExtractor={item => item.id.toString()}
-            renderItem={({ item }) => (
-              <TouchableOpacity 
-                style={styles.bookItem}
-                onPress={() => handleBookPress(item.id.toString())}
-                onLongPress={() => permissions.canDelete && handleLongPress(item.id.toString())}
-              >
-                <Text style={styles.bookName}>{item.ten_sach}</Text>
-                <Text style={styles.bookAuthor}>Tác giả: {item.tac_gia}</Text>
-                <Text style={styles.bookDetails}>
-                  Thể loại: {renderTheLoai(item)} | Số lượng: {item.so_luong_sach}
-                </Text>
-                
-                {/* Hiển thị các nút tùy theo quyền */}
-                {permissions.canEdit && (
-                  <View style={styles.actionButtons}>
-                    <TouchableOpacity 
-                      style={styles.editButton}
-                      onPress={() => router.push(`./suasach?id=${item.id}`)}
-                    >
-                      <FontAwesome name="edit" size={16} color="#007bff" />
-                      <Text style={styles.editButtonText}>Sửa</Text>
-                    </TouchableOpacity>
-                    
-                    {permissions.canDelete && (
-                      <TouchableOpacity 
-                        style={styles.deleteButton}
-                        onPress={() => handleLongPress(item.id.toString())}
-                      >
-                        <FontAwesome name="trash" size={16} color="#dc3545" />
-                        <Text style={styles.deleteButtonText}>Xóa</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>
-                  {searchQuery ? 'Không tìm thấy sách phù hợp' : 'Chưa có sách nào trong thư viện'}
-                </Text>
-              </View>
-            }
-            ListFooterComponent={ListFooterComponent}
-          />
-        </>
-      )}
 
-      {/* Chỉ hiển thị nút thêm sách nếu có quyền thêm */}
-      {permissions.canAdd && (
-        <TouchableOpacity 
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Tìm kiếm theo tên sách, tác giả"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          <FontAwesome name="search" size={16} color="gray" style={styles.searchIcon} />
+        </View>
+
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#E4434A" />
+            <Text style={styles.loadingText}>Đang tải danh sách sách...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchBooks}>
+              <Text style={styles.retryButtonText}>Thử lại</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <FlatList
+              data={filteredBooks}
+              keyExtractor={item => item.id.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.bookItem}
+                  onPress={() => handleBookPress(item.id.toString())}
+                  onLongPress={() => permissions.canDelete && handleLongPress(item.id.toString())}
+                >
+                  <Text style={styles.bookName}>{item.ten_sach}</Text>
+                  <Text style={styles.bookAuthor}>Tác giả: {item.tac_gia}</Text>
+                  <Text style={styles.bookDetails}>
+                    Thể loại: {renderTheLoai(item)} | Số lượng: {item.so_luong_sach}
+                  </Text>
+
+                  {/* Hiển thị các nút tùy theo quyền */}
+                  {permissions.canEdit && (
+                    <View style={styles.actionButtons}>
+                      <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() => router.push(`./suasach?id=${item.id}`)}
+                      >
+                        <FontAwesome name="edit" size={16} color="#007bff" />
+                        <Text style={styles.editButtonText}>Sửa</Text>
+                      </TouchableOpacity>
+
+                      {permissions.canDelete && (
+                        <TouchableOpacity
+                          style={styles.deleteButton}
+                          onPress={() => handleLongPress(item.id.toString())}
+                        >
+                          <FontAwesome name="trash" size={16} color="#dc3545" />
+                          <Text style={styles.deleteButtonText}>Xóa</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
+              contentContainerStyle={styles.listContent}
+              ListEmptyComponent={
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>
+                    {searchQuery ? 'Không tìm thấy sách phù hợp' : 'Chưa có sách nào trong thư viện'}
+                  </Text>
+                </View>
+              }
+              ListFooterComponent={ListFooterComponent}
+            />
+          </>
+        )}
+
+        <TouchableOpacity
           style={styles.addButton}
           onPress={() => router.push('./themsach')}
         >
           <Text style={styles.addButtonText}>Thêm sách</Text>
         </TouchableOpacity>
-      )}
+        {/* Chỉ hiển thị nút thêm sách nếu có quyền thêm */}
+        {permissions.canAdd && (
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => router.push('./themsach')}
+          >
+            <Text style={styles.addButtonText}>Thêm sách</Text>
+          </TouchableOpacity>
+        )}
 
-      <AlertDialog
-        visible={showDeleteDialog}
-        title="Xác nhận xóa"
-        message="Bạn có chắc chắn muốn xóa sách này?"
-        confirmText="Xóa"
-        cancelText="Hủy"
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setShowDeleteDialog(false)}
-      />
-    </View>
+        <AlertDialog
+          visible={showDeleteDialog}
+          title="Xác nhận xóa"
+          message="Bạn có chắc chắn muốn xóa sách này?"
+          confirmText="Xóa"
+          cancelText="Hủy"
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setShowDeleteDialog(false)}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#222',
+  },
   container: {
     flex: 1,
     padding: 15,

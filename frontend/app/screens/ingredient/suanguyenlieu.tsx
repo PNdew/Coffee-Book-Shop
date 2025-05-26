@@ -63,7 +63,7 @@ export default function EditIngredientScreen() {
       setLoading(true);
       await ingredientService.updateIngredient(idString, {
         ten_nguyen_lieu: tenNguyenLieu,
-        so_luong: soLuong,
+        so_luong: parseInt(soLuong),
         gia_nhap: parseInt(giaNhap)
       });
       
@@ -132,7 +132,7 @@ export default function EditIngredientScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Link href="./IngredientScreen" asChild>
-          <Pressable style={styles.backButton}>
+          <Pressable style={styles.backButton} onPress={() => router.push('./IngredientScreen')}>
             <FontAwesome name="arrow-left" size={20} color="black" />
           </Pressable>
         </Link>

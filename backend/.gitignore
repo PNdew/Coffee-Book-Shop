@@ -1,0 +1,5 @@
+env/
+cafebook_be/cafebook_be/.env
+cafebook_be/*.pyc
+cafebook_be/__pycache__/
+cafebook_be/cafebook_be/settings.py

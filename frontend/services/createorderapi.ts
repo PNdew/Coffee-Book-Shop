@@ -1,9 +1,10 @@
-import { SanphamAPI, VoucherAPI, DonghoadonAPI, OrderItem, Voucher } from '../types';
+import { SanphamAPI, VoucherAPI, DonghoadonAPI, OrderItem, Voucher } from '@/types';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { jwtDecode } from 'jwt-decode';
+import { getApiUrl } from './getAPIUrl';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_URL = getApiUrl();
 
 // Type definitions for order data
 export interface OrderHeader {
@@ -96,7 +97,7 @@ export const fetchSanpham = async (): Promise<SanphamAPI[]> => {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/sanpham/`, {
+    const response = await fetch(`${API_URL}/sanpham/`, {
       signal: controller.signal,
       headers
     });
@@ -125,7 +126,7 @@ export const fetchVoucher = async (): Promise<VoucherAPI[]> => {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/voucher/`, {
+    const response = await fetch(`${API_URL}/voucher/`, {
       headers
     });
 
@@ -160,7 +161,7 @@ export const submitOrderToAPI = async (
     }
 
     // 1️⃣ Gửi request tạo hóa đơn
-    const createOrderRes = await fetch(`${API_BASE_URL}/order/create/`, {
+    const createOrderRes = await fetch(`${API_URL}/order/create/`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -176,7 +177,7 @@ export const submitOrderToAPI = async (
     const { idhoadon } = await createOrderRes.json();
 
     // 2️⃣ Gửi chi tiết đơn hàng
-    const orderDetailsRes = await fetch(`${API_BASE_URL}/order/details/`, {
+    const orderDetailsRes = await fetch(`${API_URL}/order/details/`, {
       method: 'POST',
       headers,
       body: JSON.stringify({

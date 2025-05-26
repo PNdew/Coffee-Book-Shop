@@ -5,8 +5,8 @@ import { Text, View } from '@/components/Themed';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ingredientService, Ingredient } from '@/services/ingredientapi';
-import { getUserFromToken, getPermissionsByRole } from '../../../services/authapi';
-import type { Permissions } from '../../../services/authapi';
+import { getUserFromToken, getPermissionsByRole } from '@/services/authapi';
+import type { Permissions } from '@/services/authapi';
 import AlertDialog from '@/components/AlertDialog';
 
 export default function NguyenLieuScreen() {
@@ -46,12 +46,12 @@ export default function NguyenLieuScreen() {
   const fetchIngredients = async () => {
     try {
       setLoading(true);
-      
+
       console.log('Đang kết nối để lấy danh sách nguyên liệu...');
       // Gọi API để lấy danh sách nguyên liệu
       const data = await ingredientService.getAllIngredients();
-      console.log('Dữ liệu nhận được:', data);
-      
+      // console.log('Dữ liệu nhận được:', data); 
+
       // Cập nhật state với dữ liệu từ API
       setIngredients(data || []);
       setError(null);
@@ -64,7 +64,7 @@ export default function NguyenLieuScreen() {
     }
   };
 
-  const filteredIngredients = ingredients.filter(item => 
+  const filteredIngredients = ingredients.filter(item =>
     item.ten_nguyen_lieu.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -121,34 +121,11 @@ export default function NguyenLieuScreen() {
           <View style={styles.titleContainer}>
             <Text style={styles.title}>Danh sách nguyên liệu</Text>
           </View>
-        </View>
-        <TouchableOpacity style={styles.iconContainer} onPress={fetchIngredients}>
-          <FontAwesome name="refresh" size={20} color="#666" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <TextInput 
-          style={styles.searchInput} 
-          placeholder="Tìm kiếm nhanh"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        <FontAwesome name="search" size={16} color="gray" style={styles.searchIcon} />
-      </View>
-      
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#E4434A" />
-          <Text style={styles.loadingText}>Đang tải nguyên liệu...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchIngredients}>
-            <Text style={styles.retryButtonText}>Thử lại</Text>
+          <TouchableOpacity style={styles.iconContainer} onPress={fetchIngredients}>
+            <FontAwesome name="refresh" size={20} color="#666" />
           </TouchableOpacity>
         </View>
+      </View>
       ) : (
         <>
           <FlatList
@@ -162,7 +139,7 @@ export default function NguyenLieuScreen() {
               >
                 <Text style={styles.ingredientName}>{item.ten_nguyen_lieu}</Text>
                 <Text style={styles.ingredientQuantity}>
-                  Số lượng: {item.so_luong} | Giá nhập: {item.gia_nhap?.toLocaleString() || '0'} đ
+                  Số lượng: {item.so_luong} {item.don_vi}
                 </Text>
                 
                 {/* Hiển thị các nút tùy theo quyền */}
@@ -200,7 +177,7 @@ export default function NguyenLieuScreen() {
             ListFooterComponent={ListFooterComponent}
           />
         </>
-      )}
+      )
 
       {/* Chỉ hiển thị nút thêm nguyên liệu nếu có quyền thêm */}
       {permissions.canAdd && (
@@ -226,6 +203,10 @@ export default function NguyenLieuScreen() {
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#222',
+  },
   container: {
     flex: 1,
     padding: 15,

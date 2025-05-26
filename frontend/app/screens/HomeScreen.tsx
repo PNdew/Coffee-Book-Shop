@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Platform, Alert } from 'react-native';
+import { View, Text, Image, TextInput, TouchableOpacity, SafeAreaView, ScrollView, StyleSheet, Dimensions, Platform, Alert } from 'react-native';
 import { FontAwesome, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { getUserFromToken, getPermissionsByRole, logout } from '../../services/authapi';
@@ -95,20 +95,21 @@ const HomeScreen = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={[styles.header, { width: containerWidth }]}>
-        <View style={styles.userInfoContainer}>
-          <Text style={styles.welcomeText}>
-            Chào mừng trở lại, {userInfo?.TenNV || 'Người dùng'}!
-          </Text>
-          <Text style={styles.locationText}>
-            Vị trí: {userInfo?.ChucVuNV === ROLE.MANAGER ? 'Quản lý' : 'Nhân viên'}
-          </Text>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <View style={[styles.header, { width: containerWidth }]}>
+          <View style={styles.userInfoContainer}>
+            <Text style={styles.welcomeText}>
+              Chào mừng trở lại, {userInfo?.TenNV || 'Người dùng'}!
+            </Text>
+            <Text style={styles.locationText}>
+              Vị trí: {userInfo?.ChucVuNV === ROLE.MANAGER ? 'Quản lý' : 'Nhân viên'}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+            <Text style={styles.logoutText}>Đăng xuất</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Đăng xuất</Text>
-        </TouchableOpacity>
-      </View>
 
       <Image source={require('@/assets/images/logo.png')} style={styles.logo} />
 
@@ -140,6 +141,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f5e4',
     padding: 20,
   },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#222',
+  },
   welcomeText: {
     fontSize: 18,
     marginBottom: 5,
@@ -154,26 +159,6 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     marginBottom: 30,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    height: 40,
-    marginBottom: 30,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.25)',
-    elevation: 2,
-  },
-  searchContainerFocused: {
-    borderWidth: 0,
-  },
-  searchInput: {
-    flex: 1,
-    paddingHorizontal: 10,
-    fontSize: 14,
-    borderWidth: 0,
   },
   gridContainer: {
     flexDirection: 'row',

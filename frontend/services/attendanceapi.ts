@@ -2,8 +2,9 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { getApiUrl } from './getAPIUrl';
 
-const API_URL = Constants.expoConfig?.extra?.API_URL || 'http://localhost:8000';
+const API_URL = getApiUrl();
 
 // Hàm lấy token xác thực từ localStorage hoặc SecureStore
 const getAuthToken = async (): Promise<string | null> => {

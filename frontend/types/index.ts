@@ -67,3 +67,52 @@ export interface APICompleteOrder {
   lines: APIOrderLine[];
 }
 
+// Interface cho nguyên liệu
+export interface Ingredient {
+  id: number;
+  ten_nguyen_lieu: string;
+  so_luong: number;
+  don_vi: string;
+  gia_nhap: number;
+}
+
+// Interface cho kết quả API trả về
+interface ApiResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Ingredient[];
+}
+
+// Interface cho đầu vào khi tạo nguyên liệu mới
+export interface IngredientInput {
+  ten_nguyen_lieu: string;
+  so_luong: number;
+  don_vi: string;
+  gia_nhap: number;
+}
+
+
+export interface Book {
+  id: number;
+  ten_sach: string;
+  tac_gia: string;
+  the_loai: string;
+  so_luong_sach: number
+  trang_thai: string;
+}
+
+export interface BookInput {
+  ten_sach: string;
+  tac_gia: string;
+  the_loai: string;
+  so_luong_sach: number;
+  trang_thai: string;
+}
+
+export interface UserInfo {
+  SDTNV: string;
+  TenNV: string;
+  ChucVuNV: number;
+  exp?: number;
+};
