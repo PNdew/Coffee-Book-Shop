@@ -38,18 +38,23 @@ export default function RootLayout() {
   }, [pathname]);
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index"/>
-      <Stack.Screen name="screens/HomeScreen"/>
-      {/* <Stack.Screen name="screens/createorder/CreateOrderScreen"/>
-      <Stack.Screen name="screens/ingredient/IngredientScreen"/> */}
-      <Stack.Screen name="screens/OrderScreen"/>
-      <Stack.Screen name="screens/MenuScreen"/>
-      {/* <Stack.Screen name="screens/book/BookScreen"/> */}
-      <Stack.Screen name="screens/AttendanceScreen"/>
-      <Stack.Screen name="screens/staff/StaffScreen"/>
-      <Stack.Screen name="screens/statistics/StatisticsScreen"/>
-      <Stack.Screen name="screens/voucher/VoucherScreen"/>
+    <Stack>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/HomeScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/createorder/CreateOrderScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/ingredient/IngredientScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/OrderScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/MenuScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/book/BookScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/AttendanceScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/staff/StaffScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/staff/RegisterStaffScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/statistics/StatisticsScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/voucher/VoucherScreen" options={{ headerShown: false }} />
+      <Stack.Screen 
+        name="screens/auth/ChangePasswordScreen" 
+        options={{ headerShown: false }} 
+      />
     </Stack>
   );
 }
