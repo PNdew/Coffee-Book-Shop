@@ -1,4 +1,4 @@
-env/
+venv/
 cafebook_be/cafebook_be/.env
 cafebook_be/*.pyc
 cafebook_be/__pycache__/

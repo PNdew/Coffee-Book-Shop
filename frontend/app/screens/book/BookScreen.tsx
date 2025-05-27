@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TextInput, FlatList, TouchableOpacity, Pressable, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
+import { StyleSheet, TextInput, FlatList, TouchableOpacity, Pressable, ActivityIndicator, Alert, SafeAreaView, ScrollView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Text, View } from '@/components/Themed';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
@@ -7,8 +7,8 @@ import { useEffect, useState } from 'react';
 import { bookService } from '@/services/bookapi';
 import { Book } from '@/types';
 import AlertDialog from '@/components/AlertDialog';
-import { getUserFromToken, getPermissionsByRole } from '../../../services/authapi';
-import type { Permissions } from '../../../services/authapi';
+import { getUserFromToken, getPermissionsByRole } from '@/services/authapi';
+import type { Permissions } from '@/services/authapi';
 
 export default function SachScreen() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -121,7 +121,7 @@ export default function SachScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Link href="../" asChild>
+          <Link href="../HomeScreen" asChild>
             <Pressable style={styles.backButton}>
               <FontAwesome name="arrow-left" size={20} color="black" />
             </Pressable>
@@ -139,7 +139,7 @@ export default function SachScreen() {
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Tìm kiếm theo tên sách, tác giả"
+            placeholder="Tìm kiếm sách theo tên, tác giả"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -159,7 +159,7 @@ export default function SachScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <>
+          <ScrollView>
             <FlatList
               data={filteredBooks}
               keyExtractor={item => item.id.toString()}
@@ -209,7 +209,7 @@ export default function SachScreen() {
               }
               ListFooterComponent={ListFooterComponent}
             />
-          </>
+          </ScrollView>
         )}
 
         <TouchableOpacity
@@ -255,8 +255,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: "center",
+    backgroundColor: "none",
     marginBottom: 15,
-    paddingTop: 10,
   },
   backButton: {
     padding: 8,
@@ -264,6 +265,7 @@ const styles = StyleSheet.create({
   titleWrapper: {
     flex: 1,
     alignItems: 'center',
+    backgroundColor: "none",
   },
   titleContainer: {
     backgroundColor: '#FF8F8F',

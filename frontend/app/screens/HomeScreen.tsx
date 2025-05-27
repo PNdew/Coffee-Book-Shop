@@ -107,11 +107,6 @@ const HomeScreen = () => {
               Vị trí: {userInfo?.ChucVuNV === ROLE.MANAGER ? 'Quản lý' : 'Nhân viên'}
             </Text>
           </View>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <Text style={styles.logoutText}>Đăng xuất</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.headerButtons}>
           <TouchableOpacity 
             onPress={() => router.push('./auth/ChangePasswordScreen')} 
             style={styles.changePasswordButton}
@@ -122,14 +117,8 @@ const HomeScreen = () => {
             <Text style={styles.logoutText}>Đăng xuất</Text>
           </TouchableOpacity>
         </View>
-      </View>
 
       <Image source={require('@/assets/images/logo.png')} style={styles.logo} />
-
-      <View style={[styles.searchContainer, isSearchFocused && styles.searchContainerFocused, { width: containerWidth }]}>
-        <TextInput placeholder="Tìm kiếm nhanh" style={styles.searchInput} />
-        <Feather name="search" size={20} color="gray" />
-      </View>
 
       <View style={[styles.gridContainer, { width: containerWidth }]}>
         {menuItems.map((item, index) => (
@@ -143,7 +132,8 @@ const HomeScreen = () => {
           </TouchableOpacity>
         ))}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -209,16 +199,11 @@ const styles = StyleSheet.create({
   userInfoContainer: {
     flex: 1,
   },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   changePasswordButton: {
-    marginRight: 10,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    padding: 10,
     backgroundColor: '#007bff',
     borderRadius: 5,
+    marginRight: 10,
   },
   changePasswordText: {
     color: '#fff',

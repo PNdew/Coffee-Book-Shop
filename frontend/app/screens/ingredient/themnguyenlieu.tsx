@@ -35,8 +35,8 @@ export default function AddIngredientScreen() {
       await ingredientService.addIngredient({
         ten_nguyen_lieu: tenNguyenLieu,
         so_luong: parseInt(soLuong),
+        don_vi: donVi,
         gia_nhap: parseInt(giaNhap),
-        don_vi: donVi
       });
       
       setToast({

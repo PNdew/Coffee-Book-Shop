@@ -7,16 +7,6 @@ export interface OrderItem {
   image?: string;
 }
 
-export interface Voucher {
-  id: string;
-  title: string;
-  expireDate: string;
-  discountValue: string;
-  discountType: 'percentage' | 'fixed';
-  minimumOrderValue?: number;
-  applicableItems?: string[];
-}
-
 // Thêm các interface mới cho API Django
 export interface SanphamAPI {
   idsanpham: number;
@@ -26,8 +16,17 @@ export interface SanphamAPI {
   loaisp: string;
 }
 
-export interface VoucherAPI {
+export interface Voucher {
   idvoucher: number;
+  tenvoucher: string;
+  loaisp: string;
+  thoigianbatdauvoucher: string;
+  thoigianketthucvoucher: string;
+  giamgia: number;
+}
+
+export interface VoucherInput {
+  tenvoucher: string;
   loaisp: string;
   thoigianbatdauvoucher: string;
   thoigianketthucvoucher: string;
@@ -76,14 +75,6 @@ export interface Ingredient {
   gia_nhap: number;
 }
 
-// Interface cho kết quả API trả về
-interface ApiResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: Ingredient[];
-}
-
 // Interface cho đầu vào khi tạo nguyên liệu mới
 export interface IngredientInput {
   ten_nguyen_lieu: string;
@@ -92,22 +83,26 @@ export interface IngredientInput {
   gia_nhap: number;
 }
 
+export interface TheLoai {
+  id: number;
+  ten_the_loai: string;
+}
 
 export interface Book {
   id: number;
   ten_sach: string;
   tac_gia: string;
-  the_loai: string;
   so_luong_sach: number
   trang_thai: string;
+  the_loai_list?: TheLoai[];
 }
 
 export interface BookInput {
   ten_sach: string;
   tac_gia: string;
-  the_loai: string;
   so_luong_sach: number;
-  trang_thai: string;
+  trang_thai?: string;
+  the_loai_ids?: number[];
 }
 
 export interface UserInfo {

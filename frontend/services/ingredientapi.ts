@@ -1,9 +1,8 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-
-// Sử dụng địa chỉ IP thực tế của bạn
-export const API_URL = 'http://localhost:8000';
+import { API_URL } from './getAPIUrl';
+import { getAuthToken } from './authapi';
 
 // Interface cho nguyên liệu
 export interface Ingredient {
@@ -27,21 +26,9 @@ export interface IngredientInput {
   ten_nguyen_lieu: string;
   so_luong: number;
   don_vi: string;
+  gia_nhap: number;
 }
 
-// Hàm lấy token xác thực từ localStorage hoặc SecureStore
-const getAuthToken = async (): Promise<string | null> => {
-  try {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem('access_token');
-    } else {
-      return await SecureStore.getItemAsync('access_token');
-    }
-  } catch (error) {
-    console.error('Error getting auth token:', error);
-    return null;
-  }
-};
 
 // Service cho nguyên liệu
 export const ingredientService = {

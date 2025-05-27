@@ -2,9 +2,7 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { jwtDecode } from 'jwt-decode';
-
-// Sử dụng địa chỉ API_URL từ file khác
-import { API_URL } from './bookapi';
+import { API_URL } from './getAPIUrl';
 
 // Thêm hàm lấy token
 export const getToken = async (): Promise<string | null> => {
@@ -95,7 +93,7 @@ export const getPermissionsByRole = (chucVuNV?: number): Permissions => {
 // Đăng nhập và lấy token
 export const login = async (SDTNV: string, MatKhau: string): Promise<UserInfo | null> => {
   try {
-    const response = await axios.post<LoginResponse>(`${API_URL}/api/login/`, {
+    const response = await axios.post<LoginResponse>(`${API_URL}/login/`, {
       SDTNV,
       MatKhau
     });
@@ -159,7 +157,7 @@ export const changePassword = async (passwordData: ChangePasswordData): Promise<
       }
     };
     
-    const response = await axios.post(`${API_URL}/api/change-password/`, passwordData, config);
+    const response = await axios.post(`${API_URL}/change-password/`, passwordData, config);
     return response.data;
   } catch (error) {
     console.error('Lỗi khi đổi mật khẩu:', error);
@@ -169,5 +167,18 @@ export const changePassword = async (passwordData: ChangePasswordData): Promise<
       throw error.response?.data || error.message;
     }
     throw error;
+  }
+};
+
+export const getAuthToken = async (): Promise<string | null> => {
+  try {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem('access_token');
+    } else {
+      return await SecureStore.getItemAsync('access_token');
+    }
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return null;
   }
 };

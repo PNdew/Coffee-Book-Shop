@@ -1,9 +1,6 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-
-// Sửa lại: Khai báo trực tiếp thay vì import từ file khác
-export const API_URL = 'http://localhost:8000';
+import { API_URL } from './getAPIUrl';
+import { getAuthToken } from './authapi';
 
 // Định nghĩa interface NhanVien khớp với backend
 export interface NhanVien {
@@ -21,29 +18,13 @@ export interface ChucVu {
   loaichucvu: string;
 }
 
-// Hàm lấy token từ storage
-const getToken = async (): Promise<string | null> => {
-  try {
-    let token;
-    if (Platform.OS === 'web') {
-      token = localStorage.getItem('access_token');
-    } else {
-      token = await SecureStore.getItemAsync('access_token');
-    }
-    return token;
-  } catch (error) {
-    console.error('Lỗi khi lấy token:', error);
-    return null;
-  }
-};
-
 // Hàm lấy danh sách nhân viên
 export const getNhanVien = async (chucVu?: string): Promise<NhanVien[]> => {
   try {
-    const token = await getToken();
+    const token = await getAuthToken();
     console.log('Token:', token);
     
-    let url = `${API_URL}/api/nhanvien/`;
+    let url = `${API_URL}/nhanvien/`;
     if (chucVu) {
       url += `?chuc_vu=${chucVu}`;
     }
@@ -71,10 +52,10 @@ export const getNhanVien = async (chucVu?: string): Promise<NhanVien[]> => {
 // Hàm lấy danh sách chức vụ
 export const getChucVu = async (): Promise<ChucVu[]> => {
   try {
-    const token = await getToken();
+    const token = await getAuthToken();
     console.log('Token cho chức vụ:', token);
     
-    const response = await axios.get<ChucVu[]>(`${API_URL}/api/chucvu/`, {
+    const response = await axios.get<ChucVu[]>(`${API_URL}/chucvu/`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -105,7 +86,7 @@ export interface RegisterStaffData {
 // API đăng ký nhân viên
 export const registerStaff = async (staffData: RegisterStaffData): Promise<any> => {
   try {
-    const token = await getToken();
+    const token = await getAuthToken();
     
     if (!token) {
       throw new Error("Không có token, vui lòng đăng nhập lại");
@@ -118,7 +99,7 @@ export const registerStaff = async (staffData: RegisterStaffData): Promise<any> 
       }
     };
     
-    const response = await axios.post(`${API_URL}/api/staff/register/`, staffData, config);
+    const response = await axios.post(`${API_URL}/staff/register/`, staffData, config);
     return response.data;
   } catch (error) {
     console.error('Lỗi khi đăng ký nhân viên:', error);

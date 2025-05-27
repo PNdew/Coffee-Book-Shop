@@ -1,10 +1,7 @@
-import { SanphamAPI, VoucherAPI, DonghoadonAPI, OrderItem, Voucher } from '@/types';
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import { SanphamAPI, DonghoadonAPI, OrderItem, Voucher } from '@/types';
 import { jwtDecode } from 'jwt-decode';
-import { getApiUrl } from './getAPIUrl';
-
-const API_URL = getApiUrl();
+import { API_URL } from './getAPIUrl';
+import { getAuthToken } from './authapi';
 
 // Type definitions for order data
 export interface OrderHeader {
@@ -26,20 +23,6 @@ export interface CompleteOrder {
   header: OrderHeader;
   lines: OrderLine[];
 }
-
-// Hàm lấy token xác thực từ localStorage hoặc SecureStore
-const getAuthToken = async (): Promise<string | null> => {
-  try {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem('access_token');
-    } else {
-      return await SecureStore.getItemAsync('access_token');
-    }
-  } catch (error) {
-    console.error('Error getting auth token:', error);
-    return null;
-  }
-};
 
 // Lấy thông tin user hiện tại từ token JWT
 export const getCurrentUser = async (): Promise<any | null> => {
@@ -67,18 +50,6 @@ export const convertSanphamToOrderItem = (sanpham: SanphamAPI): OrderItem => {
     price: sanpham.giasp,
     quantity: 1,
     image: undefined // Cần cập nhật nếu có hình ảnh từ API
-  };
-};
-
-// Hàm chuyển đổi từ VoucherAPI sang Voucher
-export const convertVoucherAPIToVoucher = (voucherAPI: VoucherAPI): Voucher => {
-  return {
-    id: voucherAPI.idvoucher.toString(),
-    title: `Giảm giá ${voucherAPI.giamgia}% cho ${voucherAPI.loaisp}`,
-    expireDate: voucherAPI.thoigianketthucvoucher,
-    discountValue: voucherAPI.giamgia.toString(),
-    discountType: 'percentage',
-    minimumOrderValue: 0
   };
 };
 
@@ -115,7 +86,7 @@ export const fetchSanpham = async (): Promise<SanphamAPI[]> => {
 };
 
 // Lấy danh sách voucher từ API
-export const fetchVoucher = async (): Promise<VoucherAPI[]> => {
+export const fetchVoucher = async (): Promise<Voucher[]> => {
   try {
     const token = await getAuthToken();
     const headers: HeadersInit = {
@@ -186,7 +157,7 @@ export const submitOrderToAPI = async (
           idsanpham: item.id,
           soluongsp: item.quantity,
         })),
-        activeVoucher: voucher ? { idvoucher: parseInt(voucher.id) } : null,
+        activeVoucher: voucher ? { idvoucher: voucher.idvoucher } : null,
         notes,
       }),
     });

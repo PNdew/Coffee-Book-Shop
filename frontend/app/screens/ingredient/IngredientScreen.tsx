@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TextInput, FlatList, TouchableOpacity, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, TextInput, FlatList, TouchableOpacity, Pressable, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Text, View } from '@/components/Themed';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
@@ -22,7 +22,7 @@ export default function NguyenLieuScreen() {
     canEdit: false,
     canDelete: false
   });
-  
+
   const router = useRouter();
   const { refresh } = useLocalSearchParams();
 
@@ -38,7 +38,7 @@ export default function NguyenLieuScreen() {
         console.error('Lỗi khi lấy quyền hạn:', error);
       }
     };
-    
+
     getPermissions();
     fetchIngredients();
   }, [refresh]);
@@ -75,7 +75,7 @@ export default function NguyenLieuScreen() {
     } else {
       // Nếu chỉ có quyền xem, hiển thị thông báo
       Alert.alert(
-        "Thông báo", 
+        "Thông báo",
         "Bạn chỉ có quyền xem thông tin nguyên liệu, không thể chỉnh sửa.",
         [{ text: "Đã hiểu" }]
       );
@@ -92,7 +92,7 @@ export default function NguyenLieuScreen() {
 
   const handleDeleteConfirm = async () => {
     if (!selectedIngredientId || !permissions.canDelete) return;
-    
+
     try {
       await ingredientService.deleteIngredient(selectedIngredientId);
       setIngredients(ingredients.filter(ingredient => ingredient.id.toString() !== selectedIngredientId));
@@ -112,7 +112,7 @@ export default function NguyenLieuScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Link href="../" asChild>
+        <Link href="../HomeScreen" asChild>
           <Pressable style={styles.backButton}>
             <FontAwesome name="arrow-left" size={20} color="black" />
           </Pressable>
@@ -121,18 +121,41 @@ export default function NguyenLieuScreen() {
           <View style={styles.titleContainer}>
             <Text style={styles.title}>Danh sách nguyên liệu</Text>
           </View>
-          <TouchableOpacity style={styles.iconContainer} onPress={fetchIngredients}>
-            <FontAwesome name="refresh" size={20} color="#666" />
+        </View>
+        <TouchableOpacity style={styles.iconContainer} onPress={fetchIngredients}>
+          <FontAwesome name="refresh" size={20} color="#666" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Tìm kiếm theo tên sách, tác giả"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        <FontAwesome name="search" size={16} color="gray" style={styles.searchIcon} />
+      </View>
+
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#E4434A" />
+          <Text style={styles.loadingText}>Đang tải danh sách nguyên liệu...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchIngredients}>
+            <Text style={styles.retryButtonText}>Thử lại</Text>
           </TouchableOpacity>
         </View>
-      </View>
       ) : (
-        <>
+        <ScrollView>
           <FlatList
             data={filteredIngredients}
             keyExtractor={item => item.id.toString()}
             renderItem={({ item }) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.ingredientItem}
                 onPress={() => handleIngredientPress(item.id.toString())}
                 onLongPress={() => permissions.canDelete && handleLongPress(item.id.toString())}
@@ -141,20 +164,20 @@ export default function NguyenLieuScreen() {
                 <Text style={styles.ingredientQuantity}>
                   Số lượng: {item.so_luong} {item.don_vi}
                 </Text>
-                
+
                 {/* Hiển thị các nút tùy theo quyền */}
                 {permissions.canEdit && (
                   <View style={styles.actionButtons}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.editButton}
                       onPress={() => router.push(`./suanguyenlieu?id=${item.id}`)}
                     >
                       <FontAwesome name="edit" size={16} color="#007bff" />
                       <Text style={styles.editButtonText}>Sửa</Text>
                     </TouchableOpacity>
-                    
+
                     {permissions.canDelete && (
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.deleteButton}
                         onPress={() => handleLongPress(item.id.toString())}
                       >
@@ -176,12 +199,12 @@ export default function NguyenLieuScreen() {
             }
             ListFooterComponent={ListFooterComponent}
           />
-        </>
-      )
+        </ScrollView>
+      )}
 
       {/* Chỉ hiển thị nút thêm nguyên liệu nếu có quyền thêm */}
       {permissions.canAdd && (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.addButton}
           onPress={() => router.push('./themnguyenlieu')}
         >
@@ -215,8 +238,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: "center",
+    backgroundColor: "none",
     marginBottom: 15,
-    paddingTop: 10,
   },
   backButton: {
     padding: 8,
@@ -224,6 +248,7 @@ const styles = StyleSheet.create({
   titleWrapper: {
     flex: 1,
     alignItems: 'center',
+    backgroundColor: "none",
   },
   titleContainer: {
     backgroundColor: '#FF8F8F',

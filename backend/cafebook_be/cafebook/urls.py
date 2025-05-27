@@ -6,7 +6,8 @@ from .views.getProduct import (SanphamViewSet, VoucherViewSet, DonghoadonViewSet
 from .views.ingredient import NguyenLieuViewSet  # Import viewset cho nguyên liệu
 from .views.book import SachViewSet, TheLoaiViewSet  # Import viewset cho sách
 from .views.attendance import check_attendance  # Import hàm chấm công
-from .views.auth import LoginView
+from .views.authentication import login_view
+from .views.staff import NhanVienViewSet, ChucVuViewSet
 
 router = DefaultRouter()
 router.register(r'sanpham', SanphamViewSet)

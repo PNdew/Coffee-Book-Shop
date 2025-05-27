@@ -13,8 +13,7 @@ class SanphamSerializer(serializers.ModelSerializer):
 class VoucherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Voucher
-        fields = ['idvoucher', 'loaisp', 'thoigianbatdauvoucher', 
-                 'thoigianketthucvoucher', 'giamgia']
+        fields = '__all__'
 
 class DonghoadonSerializer(serializers.ModelSerializer):
     sanpham_info = serializers.SerializerMethodField()
