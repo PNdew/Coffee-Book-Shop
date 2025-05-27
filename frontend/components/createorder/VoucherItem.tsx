@@ -42,7 +42,7 @@ const VoucherItem: React.FC<VoucherItemProps> = ({
             isSelected && styles.selectedText,
             !isApplicable && styles.disabledText
           ]}>
-            {voucher.title}
+            {voucher.tenvoucher}
           </Text>
           {isSelected && (
             <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
@@ -53,26 +53,15 @@ const VoucherItem: React.FC<VoucherItemProps> = ({
           styles.expireDate,
           !isApplicable && styles.disabledText
         ]}>
-          Ngày hết hạn: {voucher.expireDate}
+          Ngày hết hạn: {new Date(voucher.thoigianketthucvoucher).toLocaleDateString('vi-VN')}
         </Text>
         
         <Text style={[
           styles.discountValue,
           !isApplicable && styles.disabledText
         ]}>
-          Giá trị giảm: {voucher.discountType === 'percentage' 
-            ? `${voucher.discountValue}%` 
-            : formatCurrency(Number(voucher.discountValue))}
+          Giảm giá: {voucher.giamgia}%
         </Text>
-        
-        {voucher.minimumOrderValue !== undefined && voucher.minimumOrderValue > 0 && (
-          <Text style={[
-            styles.minimumValue,
-            !isApplicable && styles.disabledText
-          ]}>
-            Giá trị đơn hàng tối thiểu: {formatCurrency(voucher.minimumOrderValue)}
-          </Text>
-        )}
         
         {!isApplicable && (
           <Text style={styles.notApplicableText}>
@@ -129,12 +118,8 @@ const styles = StyleSheet.create({
   },
   discountValue: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 3,
-  },
-  minimumValue: {
-    fontSize: 14,
-    color: '#e57373',
+    color: '#f74848',
+    fontWeight: 'bold',
     marginBottom: 3,
   },
   notApplicableText: {

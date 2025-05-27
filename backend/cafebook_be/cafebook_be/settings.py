@@ -1,5 +1,11 @@
 import os
-from dotenv import load_dotenv
+# Fix import cho dotenv==0.9.9
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    # Fallback nếu không có dotenv
+    def load_dotenv():
+        pass
 from pathlib import Path
 from corsheaders.defaults import default_headers
 
@@ -16,14 +22,7 @@ SECRET_KEY = 'django-insecure-cq7fvh48u7i*$rpje6)4l$hysiq=x7d#(04krwovr^0*9$1sx5
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost',
-    '127.0.0.1',
-    '192.168.0.111',
-    '192.168.85.15',
-    '172.20.10.6',
-    '192.168.1.3'
-] 
-
+ALLOWED_HOSTS = ['*'] 
 
 # Application definition
 
@@ -69,7 +68,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'cafebook_be.wsgi.application'
-
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -131,11 +129,44 @@ MIGRATION_MODULES = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = True  # Cho phép tất cả các domain kết nối
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8081",
+    "http://127.0.0.1:8081",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "authorization",
     "content-type",
+    "accept",
+    "accept-encoding",
+    "accept-language",
+    "access-control-request-method",
+    "access-control-request-headers",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Load .env file với dotenv==0.9.9
 load_dotenv()
 
-SECRET_KEY = os.getenv('SECRET_KEY')
-JWT_ALGORITHM = os.getenv('JWT_ALGORITHM')
+# Chỉ override nếu có trong .env
+if os.getenv('SECRET_KEY'):
+    SECRET_KEY = os.getenv('SECRET_KEY')
+    
+JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
+
+print(f">>> Using SECRET_KEY: {SECRET_KEY[:20]}...")
+print(f">>> Using JWT_ALGORITHM: {JWT_ALGORITHM}")

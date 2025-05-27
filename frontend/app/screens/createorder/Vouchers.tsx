@@ -15,20 +15,11 @@ import { Ionicons } from '@expo/vector-icons';
 
 import BackButton from '@/components/createorder/BackButton';
 import VoucherItem from '@/components/createorder/VoucherItem';
-import { Voucher, VoucherAPI, OrderItem } from '@/types';
-import { fetchVoucher, convertVoucherAPIToVoucher } from '@/services/createorderapi';
+import { Voucher, OrderItem } from '@/types';
+import { fetchVoucher } from '@/services/createorderapi';
 
 // Lấy chiều rộng màn hình để tính toán kích thước
 const SCREEN_WIDTH = Dimensions.get('window').width;
-
-// Hàm format giá tiền sang định dạng Việt Nam
-const formatCurrency = (price: number): string => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(price);
-};
 
 // Định nghĩa tabs với ID và tên hiển thị
 const tabs = [
@@ -49,33 +40,36 @@ const getDisplayNameForCategory = (category: string): string => {
   }
 };
 
+// Kiểm tra xem voucher có còn hạn sử dụng không
+const isVoucherValid = (voucher: Voucher): boolean => {
+  const now = new Date();
+  const endDate = new Date(voucher.thoigianketthucvoucher);
+  return now <= endDate;
+};
+
 // Kiểm tra xem voucher có áp dụng được cho các món đã chọn hay không
 const isVoucherApplicable = (voucher: Voucher, items: OrderItem[]): boolean => {
   if (!items || items.length === 0) return false;
   
-  // Tính tổng tiền đơn hàng
-  const orderTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  
-  // Kiểm tra giá trị tối thiểu
-  if (voucher.minimumOrderValue && orderTotal < voucher.minimumOrderValue) {
+  // Kiểm tra hạn sử dụng
+  if (!isVoucherValid(voucher)) {
     return false;
   }
   
-  // Nếu voucher áp dụng cho tất cả sản phẩm
-  if (voucher.applicableItems?.includes('khac') || voucher.title.includes('tất cả')) {
-    return true;
-  }
-  
-  // Kiểm tra danh sách áp dụng
+  // Kiểm tra loại sản phẩm
   const hasDoUong = items.some(item => item.id.startsWith('1') || item.id.startsWith('2'));
   const hasDoAn = items.some(item => item.id.startsWith('3') || item.id.startsWith('4'));
   
-  if (voucher.applicableItems?.includes('thucuong') || voucher.title.toLowerCase().includes('thức uống')) {
+  if (voucher.loaisp.toLowerCase() === 'thucuong') {
     return hasDoUong;
   }
   
-  if (voucher.applicableItems?.includes('doan') || voucher.title.toLowerCase().includes('đồ ăn')) {
+  if (voucher.loaisp.toLowerCase() === 'doan') {
     return hasDoAn;
+  }
+  
+  if (voucher.loaisp.toLowerCase() === 'khac') {
+    return true;
   }
   
   return false;
@@ -113,43 +107,20 @@ export default function VoucherManagementScreen() {
     const loadVouchers = async () => {
       try {
         setLoading(true);
+        const voucherData = await fetchVoucher();
+        console.log('Voucher data from API:', voucherData);
         
-        // Lấy dữ liệu từ API
-        try {
-          const voucherData = await fetchVoucher();
-          console.log('Voucher data from API:', voucherData);
-          
-          if (voucherData && voucherData.length > 0) {
-            const formattedVouchers = voucherData.map(item => {
-              const voucher = convertVoucherAPIToVoucher(item);
-              // Thêm thông tin applicableItems dựa vào loaisp từ API
-              voucher.applicableItems = [item.loaisp?.toLowerCase()];
-
-              // Cập nhật tiêu đề với tên hiển thị đúng
-              const displayCategory = getDisplayNameForCategory(item.loaisp);
-              voucher.title = `Giảm giá ${item.giamgia}% cho ${displayCategory}`;
-              
-              return voucher;
-            });
-            
-            setVouchers(formattedVouchers);
-            
-            // Cập nhật lại danh sách đã lọc theo tab hiện tại
-            filterVouchersByTab(activeTab, formattedVouchers);
-          } else {
-            console.log('No vouchers found from API, using mock data');
-            setVouchers([]);
-            setFilteredVouchers([]);
-          }
-        } catch (err) {
-          console.error('Error loading vouchers from API:', err);
-          setError('Không thể tải danh sách voucher');
-        } finally {
-          setLoading(false);
+        if (voucherData && voucherData.length > 0) {
+          setVouchers(voucherData);
+          filterVouchersByTab(activeTab, voucherData);
+        } else {
+          setVouchers([]);
+          setFilteredVouchers([]);
         }
       } catch (err) {
         console.error('Error loading vouchers:', err);
         setError('Không thể tải danh sách voucher');
+      } finally {
         setLoading(false);
       }
     };
@@ -161,7 +132,7 @@ export default function VoucherManagementScreen() {
   const filterVouchersByTab = (tabIndex: number, voucherList = vouchers) => {
     if (tabIndex === 0) {
       // Tất cả
-      setFilteredVouchers(voucherList);
+      setFilteredVouchers(voucherList.filter(voucher => isVoucherValid(voucher)));
     } else if (tabIndex === 1) {
       // Áp dụng được cho giỏ hàng hiện tại
       setFilteredVouchers(
@@ -173,15 +144,14 @@ export default function VoucherManagementScreen() {
       
       setFilteredVouchers(
         voucherList.filter(voucher => {
-          if (selectedTab === 'thucuong') { // Thức uống
-            return voucher.applicableItems?.includes('thucuong') || 
-                   voucher.title.toLowerCase().includes('thức uống');
-          } else if (selectedTab === 'doan') { // Đồ ăn
-            return voucher.applicableItems?.includes('doan') || 
-                   voucher.title.toLowerCase().includes('đồ ăn');
-          } else if (selectedTab === 'khac') { // Khác
-            return voucher.applicableItems?.includes('khac') || 
-                   voucher.title.toLowerCase().includes('tất cả');
+          if (!isVoucherValid(voucher)) return false;
+          
+          if (selectedTab === 'thucuong') {
+            return voucher.loaisp.toLowerCase() === 'thucuong';
+          } else if (selectedTab === 'doan') {
+            return voucher.loaisp.toLowerCase() === 'doan';
+          } else if (selectedTab === 'khac') {
+            return voucher.loaisp.toLowerCase() === 'khac';
           }
           return false;
         })
@@ -209,7 +179,6 @@ export default function VoucherManagementScreen() {
   const handleSelectVoucher = (voucher: Voucher) => {
     // Kiểm tra xem voucher có áp dụng được không
     if (!isVoucherApplicable(voucher, currentItems)) {
-      // Hiển thị thông báo hoặc xử lý khi voucher không áp dụng được
       alert('Voucher này không áp dụng được cho đơn hàng hiện tại');
       return;
     }
@@ -226,7 +195,7 @@ export default function VoucherManagementScreen() {
   
   // Xử lý quay lại không chọn voucher
   const handleBackToOrder = () => {
-    router.back(); // Sử dụng router.back() thay vì router.replace để nhanh hơn
+    router.back();
   };
 
   const renderContent = () => {
@@ -249,11 +218,11 @@ export default function VoucherManagementScreen() {
     return (
       <FlatList
         data={filteredVouchers}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.idvoucher.toString()}
         renderItem={({ item }) => (
           <VoucherItem 
             voucher={item} 
-            isSelected={selectedVoucher?.id === item.id}
+            isSelected={selectedVoucher?.idvoucher === item.idvoucher}
             isApplicable={isVoucherApplicable(item, currentItems)}
             onSelect={() => handleSelectVoucher(item)}
           />
@@ -366,7 +335,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#eee',
     minWidth: 80,
-    width: (SCREEN_WIDTH - 100) / 3, // Adjust width based on screen size
+    width: (SCREEN_WIDTH - 100) / 3,
     maxWidth: 120,
     height: 36,
     alignItems: 'center',

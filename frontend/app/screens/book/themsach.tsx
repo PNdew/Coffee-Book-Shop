@@ -3,7 +3,8 @@ import { Text, View } from '@/components/Themed';
 import { StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Link, useRouter } from 'expo-router';
-import { bookService, theLoaiService, TheLoai } from '@/services/bookapi';
+import { bookService, theLoaiService } from '@/services/bookapi';
+import { TheLoai } from "@/types";
 import MultiSelect from '@/components/MultiSelect';
 
 export default function ThemSachScreen() {

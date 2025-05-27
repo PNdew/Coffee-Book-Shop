@@ -1,9 +1,6 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-
-// Sử dụng địa chỉ IP thực tế của bạn
-export const API_URL = 'http://localhost:8000';
+import { API_URL } from './getAPIUrl';
+import { getAuthToken } from './authapi';
 
 // Interface cho dòng hóa đơn
 export interface DongHoaDon {
@@ -35,27 +32,13 @@ export interface HoaDon {
   donghoadon: DongHoaDon[];
 }
 
-// Hàm lấy token xác thực từ localStorage hoặc SecureStore
-const getAuthToken = async (): Promise<string | null> => {
-  try {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem('access_token');
-    } else {
-      return await SecureStore.getItemAsync('access_token');
-    }
-  } catch (error) {
-    console.error('Error getting auth token:', error);
-    return null;
-  }
-};
-
 // Service cho hóa đơn
 export const billService = {
   getAllHoaDon: async () => {
     try {
-      console.log('Gọi API tại:', `${API_URL}/api/hoadon/`);
+      console.log('Gọi API tại:', `${API_URL}/hoadon/`);
       const token = await getAuthToken();
-      const response = await axios.get(`${API_URL}/api/hoadon/`, {
+      const response = await axios.get(`${API_URL}/hoadon/`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : '', 
         }
@@ -80,7 +63,7 @@ export const billService = {
   getHoaDon: async (id: string) => {
     try {
       const token = await getAuthToken();
-      const response = await axios.get(`${API_URL}/api/hoadon/${id}/`, {
+      const response = await axios.get(`${API_URL}/hoadon/${id}/`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : '', 
         }
@@ -95,7 +78,7 @@ export const billService = {
   getDongHoaDon: async (hoaDonId: string) => {
     try {
       const token = await getAuthToken();
-      const response = await axios.get(`${API_URL}/api/hoadon/${hoaDonId}/dong_hoa_don/`, {
+      const response = await axios.get(`${API_URL}/hoadon/${hoaDonId}/dong_hoa_don/`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : '', 
         }
@@ -110,7 +93,7 @@ export const billService = {
   deleteHoaDon: async (id: string) => {
     try {
       const token = await getAuthToken();
-      await axios.delete(`${API_URL}/api/hoadon/${id}/`, {
+      await axios.delete(`${API_URL}/hoadon/${id}/`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : '', 
         }
@@ -124,7 +107,7 @@ export const billService = {
   insertTestData: async () => {
     try {
       const token = await getAuthToken();
-      const response = await axios.post(`${API_URL}/api/hoadon/insert_test_data/`, {}, {
+      const response = await axios.post(`${API_URL}/hoadon/insert_test_data/`, {}, {
         headers: {
           Authorization: token ? `Bearer ${token}` : '', 
         }

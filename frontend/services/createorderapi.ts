@@ -1,9 +1,7 @@
-import { SanphamAPI, VoucherAPI, DonghoadonAPI, OrderItem, Voucher } from '../types';
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import { SanphamAPI, DonghoadonAPI, OrderItem, Voucher } from '@/types';
 import { jwtDecode } from 'jwt-decode';
-
-const API_BASE_URL = 'http://localhost:8000/api';
+import { API_URL } from './getAPIUrl';
+import { getAuthToken } from './authapi';
 
 // Type definitions for order data
 export interface OrderHeader {
@@ -25,20 +23,6 @@ export interface CompleteOrder {
   header: OrderHeader;
   lines: OrderLine[];
 }
-
-// Hàm lấy token xác thực từ localStorage hoặc SecureStore
-const getAuthToken = async (): Promise<string | null> => {
-  try {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem('access_token');
-    } else {
-      return await SecureStore.getItemAsync('access_token');
-    }
-  } catch (error) {
-    console.error('Error getting auth token:', error);
-    return null;
-  }
-};
 
 // Lấy thông tin user hiện tại từ token JWT
 export const getCurrentUser = async (): Promise<any | null> => {
@@ -69,18 +53,6 @@ export const convertSanphamToOrderItem = (sanpham: SanphamAPI): OrderItem => {
   };
 };
 
-// Hàm chuyển đổi từ VoucherAPI sang Voucher
-export const convertVoucherAPIToVoucher = (voucherAPI: VoucherAPI): Voucher => {
-  return {
-    id: voucherAPI.idvoucher.toString(),
-    title: `Giảm giá ${voucherAPI.giamgia}% cho ${voucherAPI.loaisp}`,
-    expireDate: voucherAPI.thoigianketthucvoucher,
-    discountValue: voucherAPI.giamgia.toString(),
-    discountType: 'percentage',
-    minimumOrderValue: 0
-  };
-};
-
 // Lấy danh sách sản phẩm từ API
 export const fetchSanpham = async (): Promise<SanphamAPI[]> => {
   try {
@@ -96,7 +68,7 @@ export const fetchSanpham = async (): Promise<SanphamAPI[]> => {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/sanpham/`, {
+    const response = await fetch(`${API_URL}/sanpham/`, {
       signal: controller.signal,
       headers
     });
@@ -114,7 +86,7 @@ export const fetchSanpham = async (): Promise<SanphamAPI[]> => {
 };
 
 // Lấy danh sách voucher từ API
-export const fetchVoucher = async (): Promise<VoucherAPI[]> => {
+export const fetchVoucher = async (): Promise<Voucher[]> => {
   try {
     const token = await getAuthToken();
     const headers: HeadersInit = {
@@ -125,7 +97,7 @@ export const fetchVoucher = async (): Promise<VoucherAPI[]> => {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/voucher/`, {
+    const response = await fetch(`${API_URL}/voucher/`, {
       headers
     });
 
@@ -160,7 +132,7 @@ export const submitOrderToAPI = async (
     }
 
     // 1️⃣ Gửi request tạo hóa đơn
-    const createOrderRes = await fetch(`${API_BASE_URL}/order/create/`, {
+    const createOrderRes = await fetch(`${API_URL}/order/create/`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -176,7 +148,7 @@ export const submitOrderToAPI = async (
     const { idhoadon } = await createOrderRes.json();
 
     // 2️⃣ Gửi chi tiết đơn hàng
-    const orderDetailsRes = await fetch(`${API_BASE_URL}/order/details/`, {
+    const orderDetailsRes = await fetch(`${API_URL}/order/details/`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -185,7 +157,7 @@ export const submitOrderToAPI = async (
           idsanpham: item.id,
           soluongsp: item.quantity,
         })),
-        activeVoucher: voucher ? { idvoucher: parseInt(voucher.id) } : null,
+        activeVoucher: voucher ? { idvoucher: voucher.idvoucher } : null,
         notes,
       }),
     });

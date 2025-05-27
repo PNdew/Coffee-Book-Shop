@@ -1,7 +1,5 @@
 from django.db import models
 
-# Create your models here.
-
 class Sach(models.Model):
     id = models.AutoField(primary_key=True, db_column='IDSach')
     ten_sach = models.CharField(max_length=255, unique=True, null=True, db_column='TenSach')

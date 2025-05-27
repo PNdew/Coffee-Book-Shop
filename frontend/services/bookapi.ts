@@ -1,53 +1,15 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-
-// Sử dụng địa chỉ IP thực tế của bạn
-export const API_URL = 'http://localhost:8000';
-
-export interface TheLoai {
-  id: number;
-  ten_the_loai: string;
-}
-
-export interface Book {
-  id: number;
-  ten_sach: string;
-  tac_gia: string;
-  so_luong_sach: number
-  trang_thai: string;
-  the_loai_list?: TheLoai[];
-}
-
-export interface BookInput {
-  ten_sach: string;
-  tac_gia: string;
-  so_luong_sach: number;
-  trang_thai?: string;
-  the_loai_ids?: number[];
-}
-
-// Hàm lấy token xác thực từ localStorage hoặc SecureStore
-const getAuthToken = async (): Promise<string | null> => {
-  try {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem('access_token');
-    } else {
-      return await SecureStore.getItemAsync('access_token');
-    }
-  } catch (error) {
-    console.error('Error getting auth token:', error);
-    return null;
-  }
-};
+import { BookInput } from '@/types'
+import { API_URL } from './getAPIUrl';
+import { getAuthToken } from './authapi';
 
 // Thêm service cho sách
 export const bookService = {
   getAllBooks: async () => {
     try {
-      console.log('Gọi API tại:', `${API_URL}/api/sach/`);
+      console.log('Gọi API tại:', `${API_URL}/sach/`);
       const token = await getAuthToken();
-      const response = await axios.get(`${API_URL}/api/sach/`, {
+      const response = await axios.get(`${API_URL}/sach/`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : '', 
         }
@@ -71,7 +33,7 @@ export const bookService = {
   
   getBook: async (id: string) => {
     try {
-      const response = await axios.get(`${API_URL}/api/sach/${id}/`);
+      const response = await axios.get(`${API_URL}/sach/${id}/`);
       return response.data;
     } catch (error) {
       console.error(`Lỗi khi lấy thông tin sách ${id}:`, error);
@@ -81,7 +43,7 @@ export const bookService = {
   
   addBook: async (bookData: BookInput) => {
     try {
-      const response = await axios.post(`${API_URL}/api/sach/`, bookData);
+      const response = await axios.post(`${API_URL}/sach/`, bookData);
       return response.data;
     } catch (error) {
       console.error('Lỗi khi thêm sách:', error);
@@ -91,7 +53,7 @@ export const bookService = {
   
   updateBook: async (id: string, bookData: Partial<BookInput>) => {
     try {
-      const response = await axios.put(`${API_URL}/api/sach/${id}/`, bookData);
+      const response = await axios.put(`${API_URL}/sach/${id}/`, bookData);
       return response.data;
     } catch (error) {
       console.error(`Lỗi khi cập nhật sách ${id}:`, error);
@@ -101,7 +63,7 @@ export const bookService = {
   
   deleteBook: async (id: string) => {
     try {
-      await axios.delete(`${API_URL}/api/sach/${id}/`);
+      await axios.delete(`${API_URL}/sach/${id}/`);
     } catch (error) {
       console.error(`Lỗi khi xóa sách ${id}:`, error);
       throw error;
@@ -113,8 +75,8 @@ export const bookService = {
 export const theLoaiService = {
   getAllTheLoai: async () => {
     try {
-      console.log('Gọi API tại:', `${API_URL}/api/theloai/`);
-      const response = await axios.get(`${API_URL}/api/theloai/`);
+      console.log('Gọi API tại:', `${API_URL}/theloai/`);
+      const response = await axios.get(`${API_URL}/theloai/`);
       console.log('Dữ liệu thể loại nhận được:', response.data);
       
       if (Array.isArray(response.data)) {
@@ -133,7 +95,7 @@ export const theLoaiService = {
   
   getTheLoai: async (id: string) => {
     try {
-      const response = await axios.get(`${API_URL}/api/theloai/${id}/`);
+      const response = await axios.get(`${API_URL}/theloai/${id}/`);
       return response.data;
     } catch (error) {
       console.error(`Lỗi khi lấy thông tin thể loại ${id}:`, error);
@@ -143,7 +105,7 @@ export const theLoaiService = {
   
   addTheLoai: async (theLoaiData: { ten_the_loai: string }) => {
     try {
-      const response = await axios.post(`${API_URL}/api/theloai/`, theLoaiData);
+      const response = await axios.post(`${API_URL}/theloai/`, theLoaiData);
       return response.data;
     } catch (error) {
       console.error('Lỗi khi thêm thể loại:', error);
