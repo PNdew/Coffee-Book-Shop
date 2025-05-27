@@ -54,6 +54,49 @@ export const getUserFromToken = async (): Promise<UserInfo | null> => {
   }
 };
 
+// Lấy token xác thực
+export const getAuthToken = async (): Promise<string | null> => {
+  try {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem('access_token');
+    } else {
+      return await SecureStore.getItemAsync('access_token');
+    }
+  } catch (error) {
+    console.error('Lỗi khi lấy token:', error);
+    return null;
+  }
+};
+
+// Kiểm tra quyền từ API
+export const checkPermissionAPI = async (chucVu: number, chucNang: string): Promise<boolean> => {
+  try {
+    const token = await getAuthToken();
+    if (!token) {
+      return false;
+    }
+
+    const response = await axios.post(
+      `${API_URL}/api/check-permission/`,
+      {
+        chuc_vu: chucVu,
+        chuc_nang: chucNang
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return response.data.access === true;
+  } catch (error) {
+    console.error('Lỗi khi kiểm tra quyền:', error);
+    return false;
+  }
+};
+
 // Lấy quyền hạn dựa vào vai trò
 export const getPermissionsByRole = (chucVuNV?: number): Permissions => {
   // Quản lý (1) có tất cả quyền, Nhân viên (2) chỉ có quyền xem

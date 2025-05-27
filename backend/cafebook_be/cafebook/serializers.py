@@ -9,6 +9,13 @@ class SanphamSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sanpham
         fields = ['idsanpham', 'tensp', 'giasp', 'trangthaisp', 'loaisp']
+        read_only_fields = ['idsanpham']
+
+    def validate_giasp(self, value):
+        # Chuyển đổi số nguyên thành Decimal nếu cần
+        if isinstance(value, int):
+            return float(value)
+        return value
 
 class VoucherSerializer(serializers.ModelSerializer):
     class Meta:

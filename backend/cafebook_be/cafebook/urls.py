@@ -7,6 +7,7 @@ from .views.ingredient import NguyenLieuViewSet  # Import viewset cho nguyên li
 from .views.book import SachViewSet, TheLoaiViewSet  # Import viewset cho sách
 from .views.attendance import check_attendance  # Import hàm chấm công
 from .views.staff import NhanVienViewSet, ChucVuViewSet  # Import viewset cho nhân viên và chức vụ
+from .views.checkpermission import check_permission_api
 
 router = DefaultRouter()
 router.register(r'sanpham', SanphamViewSet)
@@ -21,6 +22,7 @@ router.register(r'chucvu', ChucVuViewSet)  # Thêm router cho chức vụ
 
 urlpatterns = [
     path("login/", login_view),
+    path("checkpermission/", check_permission_api),
     path("attendance/check/", check_attendance, name="check_attendance"),
     path("order/create/", createOrder, name="create_order"),
     path("order/details/", createOrderDetails, name="create_order_line"),
