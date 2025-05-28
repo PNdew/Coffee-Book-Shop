@@ -37,11 +37,6 @@ class SanphamViewSet(viewsets.ModelViewSet):
                 "error": f"Lỗi khi tạo sản phẩm: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class VoucherViewSet(viewsets.ModelViewSet):
-    queryset = Voucher.objects.all()
-    serializer_class = VoucherSerializer
-    # permission_classes = [IsAuthenticatedWithJWT]
-
 class HoadonViewSet(viewsets.ModelViewSet):
     queryset = Hoadon.objects.all().order_by('-ngayhd')
     serializer_class = HoadonSerializer

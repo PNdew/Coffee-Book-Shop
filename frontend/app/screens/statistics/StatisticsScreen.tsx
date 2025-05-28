@@ -1,78 +1,37 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Dimensions, Platform, TextInput, FlatList } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart, PieChart } from 'react-native-chart-kit';
-
+import { StatisticsData } from '@/types/statistics';
+import { fetchStatistics } from '@/services/statisticapi';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function StatisticsScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('day'); // 'day', 'week', 'month'
-
-  // Mock data cho biểu đồ đường
-  const weeklyRevenueData = {
-    labels: ['1', '2', '3', '4', '5', '6', '7'],
-    datasets: [
-      {
-        data: [450, 950, 650, 700, 350, 650, 600],
-        color: (opacity = 1) => `rgba(134, 65, 244, ${opacity})`,
-        strokeWidth: 2
-      }
-    ],
-    legend: ['Doanh thu']
-  };
-
-  const monthlyRevenueData = {
-    labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'],
-    datasets: [
-      {
-        data: [500, 700, 850, 950, 750, 650, 900, 1050, 950, 800, 700, 900],
-        color: (opacity = 1) => `rgba(134, 65, 244, ${opacity})`,
-        strokeWidth: 2
-      }
-    ],
-    legend: ['Doanh thu']
-  };
-
-  // Mock data cho biểu đồ tròn
-  const drinksPieChartData = [
-    {
-      name: '#001',
-      population: 15,
-      color: 'rgba(131, 167, 234, 1)',
-      legendFontColor: '#7F7F7F',
-      legendFontSize: 12
+  const [activeTab, setActiveTab] = useState('day');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const isWeb = Platform.OS === 'web';
+  const [data, setData] = useState<StatisticsData>({
+    tong_hoa_don: 0,
+    tong_doanh_thu: 0,
+    tong_san_pham_ban: 0,
+    tong_thuc_uong_ban: 0,
+    tong_do_an_ban: 0,
+    thuc_uong_ban_chay: null,
+    do_an_ban_chay: null,
+    revenue_data: {
+      labels: [],
+      datasets: [{ data: [], color: (opacity = 1) => `rgba(134, 65, 244, ${opacity})`, strokeWidth: 2 }],
+      legend: ['Doanh thu'],
     },
-    {
-      name: '#002',
-      population: 10,
-      color: 'rgba(255, 165, 180, 1)',
-      legendFontColor: '#7F7F7F',
-      legendFontSize: 12
-    },
-    {
-      name: '#003',
-      population: 25,
-      color: 'rgba(131, 227, 234, 1)',
-      legendFontColor: '#7F7F7F',
-      legendFontSize: 12
-    },
-    {
-      name: '#004',
-      population: 30,
-      color: 'rgba(255, 195, 100, 1)',
-      legendFontColor: '#7F7F7F',
-      legendFontSize: 12
-    },
-    {
-      name: '#005',
-      population: 20,
-      color: 'rgba(179, 134, 255, 1)',
-      legendFontColor: '#7F7F7F',
-      legendFontSize: 12
-    }
-  ];
+    pie_chart_data: [],
+    top_san_pham: [],
+  });
 
   const chartConfig = {
     backgroundGradientFrom: '#ffffff',
@@ -83,28 +42,122 @@ export default function StatisticsScreen() {
     propsForDots: {
       r: '6',
       strokeWidth: '2',
-      stroke: '#ffa726'
+      stroke: '#ffa726',
     },
-    useShadowColorFromDataset: false
+    useShadowColorFromDataset: false,
   };
 
-  // Render tab content
+  useEffect(() => {
+    loadData();
+  }, [activeTab, selectedDate]);
+
+  const loadData = async () => {
+    try {
+      const statisticsData = await fetchStatistics(activeTab as 'day' | 'week' | 'month', selectedDate);
+      setData(statisticsData);
+    } catch (error) {
+      console.error('Error loading statistics:', error);
+    }
+  };
+
+  const onDateChange = (event: any, selected?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selected) {
+      setSelectedDate(selected);
+    }
+  };
+
+  const onWebDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = event.target.value;
+    if (newDate) {
+      setSelectedDate(new Date(newDate));
+    }
+  };
+
+  // Formatted display date based on active tab
+  const getDisplayDate = () => {
+    switch(activeTab) {
+      case 'day':
+        return format(selectedDate, 'dd/MM/yyyy', { locale: vi });
+      case 'week':
+        return `Tuần ${Math.ceil(selectedDate.getDate() / 7)} - ${format(selectedDate, 'MM/yyyy', { locale: vi })}`;
+      case 'month':
+        return format(selectedDate, 'MM/yyyy', { locale: vi });
+      default:
+        return format(selectedDate, 'dd/MM/yyyy', { locale: vi });
+    }
+  };
+
+  const renderDatePicker = () => {
+    return (
+      <View style={styles.datePickerContainer}>
+        {isWeb ? (
+          // Web date picker
+          <View>
+            <input
+              type={activeTab === 'month' ? 'month' : 'date'}
+              value={format(selectedDate, activeTab === 'month' ? 'yyyy-MM' : 'yyyy-MM-dd')}
+              onChange={onWebDateChange}
+              className="web-date-picker"
+              style={{
+                border: 'none',
+                backgroundColor: '#fff',
+                padding: '8px 15px',
+                borderRadius: '20px',
+                fontSize: '14px',
+                color: '#333',
+                fontWeight: '500',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                outline: 'none',
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+              }}
+            />
+          </View>
+        ) : (
+          // Native mobile date picker
+          <>
+            {showDatePicker ? (
+              <DateTimePicker
+                value={selectedDate}
+                mode={activeTab === 'day' ? 'date' : (activeTab === 'month' ? 'date' : 'date')}
+                display="default"
+                onChange={onDateChange}
+              />
+            ) : (
+              <TouchableOpacity 
+                style={styles.dateButton} 
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Ionicons name="calendar" size={18} color="#333" />
+                <Text style={styles.dateButtonText}>{getDisplayDate()}</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+      </View>
+    );
+  };
+
   const renderDayTab = () => {
     return (
-      <View style={styles.tabContent}>
+      <View>
         {/* Thống kê doanh thu */}
         <View style={styles.statisticsBox}>
           <Text style={styles.boxTitle}>Thống kê doanh thu</Text>
           <View style={styles.separator} />
-          
-          <Text style={styles.dateLabel}>Ngày 04/05/2025:</Text>
+          <Text style={styles.dateLabel}>Ngày {getDisplayDate()}:</Text>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Tổng số hóa đơn bán ra:</Text>
-            <Text style={styles.statValue}>10</Text>
+            <Text style={styles.statValue}>{data.tong_hoa_don}</Text>
           </View>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Tổng số doanh thu:</Text>
-            <Text style={styles.statValue}>1.000.000đ</Text>
+            <Text style={styles.statValue}>
+              {typeof data.tong_doanh_thu === 'string' 
+                ? parseInt(data.tong_doanh_thu).toLocaleString('vi-VN')
+                : data.tong_doanh_thu.toLocaleString('vi-VN')}đ
+            </Text>
           </View>
         </View>
 
@@ -112,43 +165,26 @@ export default function StatisticsScreen() {
         <View style={styles.statisticsBox}>
           <Text style={styles.boxTitle}>Thống kê món ăn - đồ uống</Text>
           <View style={styles.separator} />
-          
-          <Text style={styles.dateLabel}>Ngày 04/05/2025:</Text>
+          <Text style={styles.dateLabel}>Ngày {getDisplayDate()}:</Text>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Tổng số món ăn - đồ uống bán ra:</Text>
-            <Text style={styles.statValue}>30</Text>
+            <Text style={styles.statValue}>{data.tong_san_pham_ban}</Text>
           </View>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Tổng số đồ uống bán ra:</Text>
-            <Text style={styles.statValue}>20</Text>
+            <Text style={styles.statValue}>{data.tong_thuc_uong_ban}</Text>
           </View>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Tổng số món ăn bán ra:</Text>
-            <Text style={styles.statValue}>10</Text>
+            <Text style={styles.statValue}>{data.tong_do_an_ban}</Text>
           </View>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Đồ uống bán chạy:</Text>
-            <Text style={styles.statValue}>#001</Text>
+            <Text style={styles.statValue}>{data.thuc_uong_ban_chay || 'N/A'}</Text>
           </View>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Món ăn bán chạy:</Text>
-            <Text style={styles.statValue}>#010</Text>
-          </View>
-        </View>
-
-        {/* Thống kê sách */}
-        <View style={styles.statisticsBox}>
-          <Text style={styles.boxTitle}>Thống kê sách</Text>
-          <View style={styles.separator} />
-          
-          <Text style={styles.dateLabel}>Ngày 04/05/2025:</Text>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Tổng số sách được mượn:</Text>
-            <Text style={styles.statValue}>20</Text>
-          </View>
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Sách được mượn nhiều:</Text>
-            <Text style={styles.statValue}>#001</Text>
+            <Text style={styles.statValue}>{data.do_an_ban_chay || 'N/A'}</Text>
           </View>
         </View>
       </View>
@@ -157,51 +193,58 @@ export default function StatisticsScreen() {
 
   const renderWeekTab = () => {
     return (
-      <View style={styles.tabContent}>
+      <View>
         {/* Thống kê doanh thu */}
         <View style={styles.statisticsBox}>
           <Text style={styles.boxTitle}>Thống kê doanh thu</Text>
           <View style={styles.separator} />
-          
-          <Text style={styles.dateLabel}>Tuần 1 - Tháng 5:</Text>
-          
-          <LineChart
-            data={weeklyRevenueData}
-            width={screenWidth - 60}
-            height={220}
-            chartConfig={chartConfig}
-            bezier
-            style={styles.chart}
-          />
-
+          <Text style={styles.dateLabel}>{getDisplayDate()}:</Text>
+          {data.revenue_data && data.revenue_data.labels && data.revenue_data.labels.length > 0 ? (
+            <LineChart
+              data={data.revenue_data}
+              width={screenWidth - 60}
+              height={220}
+              chartConfig={chartConfig}
+              bezier
+              style={styles.chart}
+            />
+          ) : (
+            <Text style={styles.noDataText}>Không có dữ liệu biểu đồ</Text>
+          )}
           <View style={[styles.statRow, styles.marginTop10]}>
             <Text style={styles.statLabel}>Tổng số hóa đơn bán ra:</Text>
-            <Text style={styles.statValue}>30</Text>
+            <Text style={styles.statValue}>{data.tong_hoa_don}</Text>
           </View>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Tổng số doanh thu:</Text>
-            <Text style={styles.statValue}>5.000.000đ</Text>
+            <Text style={styles.statValue}>
+              {typeof data.tong_doanh_thu === 'string' 
+                ? parseInt(data.tong_doanh_thu).toLocaleString('vi-VN')
+                : data.tong_doanh_thu.toLocaleString('vi-VN')}đ
+            </Text>
           </View>
         </View>
 
         {/* Thống kê đồ uống */}
         <View style={styles.statisticsBox}>
-          <Text style={styles.boxTitle}>Thống kê các sản phẩm bán chạy  </Text>
+          <Text style={styles.boxTitle}>Thống kê các sản phẩm bán chạy</Text>
           <View style={styles.separator} />
-          
-          <Text style={styles.dateLabel}>Tuần 1 - Tháng 5:</Text>
-          
+          <Text style={styles.dateLabel}>{getDisplayDate()}:</Text>
           <View style={styles.pieChartContainer}>
-            <PieChart
-              data={drinksPieChartData}
-              width={screenWidth - 60}
-              height={200}
-              chartConfig={chartConfig}
-              accessor="population"
-              backgroundColor="transparent"
-              paddingLeft="15"
-              absolute
-            />
+            {data.pie_chart_data && data.pie_chart_data.length > 0 ? (
+              <PieChart
+                data={data.pie_chart_data}
+                width={screenWidth - 60}
+                height={200}
+                chartConfig={chartConfig}
+                accessor="population"
+                backgroundColor="transparent"
+                paddingLeft="15"
+                absolute
+              />
+            ) : (
+              <Text style={styles.noDataText}>Không có dữ liệu biểu đồ</Text>
+            )}
           </View>
         </View>
       </View>
@@ -210,112 +253,75 @@ export default function StatisticsScreen() {
 
   const renderMonthTab = () => {
     return (
-      <View style={styles.tabContent}>
+      <View>
         {/* Thống kê doanh thu tháng */}
         <View style={styles.statisticsBox}>
-          <Text style={styles.boxTitle}>Thống kê doanh thu năm 2025</Text>
+          <Text style={styles.boxTitle}>Thống kê doanh thu năm {selectedDate.getFullYear()}</Text>
           <View style={styles.separator} />
-          
-          <LineChart
-            data={monthlyRevenueData}
-            width={screenWidth - 60}
-            height={220}
-            chartConfig={chartConfig}
-            bezier
-            style={styles.chart}
-          />
-
+          {data.revenue_data && data.revenue_data.labels && data.revenue_data.labels.length > 0 ? (
+            <LineChart
+              data={data.revenue_data}
+              width={screenWidth - 60}
+              height={220}
+              chartConfig={chartConfig}
+              bezier
+              style={styles.chart}
+            />
+          ) : (
+            <Text style={styles.noDataText}>Không có dữ liệu biểu đồ</Text>
+          )}
           <View style={[styles.statRow, styles.marginTop10]}>
             <Text style={styles.statLabel}>Tổng số hóa đơn bán ra:</Text>
-            <Text style={styles.statValue}>320</Text>
+            <Text style={styles.statValue}>{data.tong_hoa_don}</Text>
           </View>
           <View style={styles.statRow}>
             <Text style={styles.statLabel}>Tổng số doanh thu:</Text>
-            <Text style={styles.statValue}>25.000.000đ</Text>
+            <Text style={styles.statValue}>
+              {typeof data.tong_doanh_thu === 'string' 
+                ? parseInt(data.tong_doanh_thu).toLocaleString('vi-VN')
+                : data.tong_doanh_thu.toLocaleString('vi-VN')}đ
+            </Text>
           </View>
         </View>
 
         {/* Thống kê sản phẩm bán chạy theo tháng */}
-        <View style={styles.statisticsBox}>
-          <Text style={styles.boxTitle}>Top 5 sản phẩm bán chạy tháng 5/2025</Text>
-          <View style={styles.separator} />
-          
-          <View style={styles.topProductRow}>
-            <Text style={styles.topRank}>1</Text>
-            <Text style={styles.topName}>Cà phê sữa #001</Text>
-            <Text style={styles.topSales}>120 ly</Text>
+        {data.top_san_pham && data.top_san_pham.length > 0 && (
+          <View style={styles.statisticsBox}>
+            <Text style={styles.boxTitle}>Top 5 sản phẩm bán chạy tháng {selectedDate.getMonth() + 1}</Text>
+            <View style={styles.separator} />
+            {data.top_san_pham.map((item, index) => (
+              <View style={styles.topProductRow} key={index}>
+                <Text style={styles.topRank}>{item.hang}</Text>
+                <Text style={styles.topName}>{item.ten}</Text>
+                <Text style={styles.topSales}>{item.so_luong} ly</Text>
+              </View>
+            ))}
           </View>
-          
-          <View style={styles.topProductRow}>
-            <Text style={styles.topRank}>2</Text>
-            <Text style={styles.topName}>Trà sữa trân châu #002</Text>
-            <Text style={styles.topSales}>105 ly</Text>
-          </View>
-          
-          <View style={styles.topProductRow}>
-            <Text style={styles.topRank}>3</Text>
-            <Text style={styles.topName}>Bánh mì gà #010</Text>
-            <Text style={styles.topSales}>90 cái</Text>
-          </View>
-          
-          <View style={styles.topProductRow}>
-            <Text style={styles.topRank}>4</Text>
-            <Text style={styles.topName}>Matcha đá xay #005</Text>
-            <Text style={styles.topSales}>85 ly</Text>
-          </View>
-          
-          <View style={styles.topProductRow}>
-            <Text style={styles.topRank}>5</Text>
-            <Text style={styles.topName}>Sinh tố xoài #007</Text>
-            <Text style={styles.topSales}>78 ly</Text>
-          </View>
-        </View>
+        )}
 
         {/* Doanh thu theo danh mục */}
-        <View style={styles.statisticsBox}>
-          <Text style={styles.boxTitle}>Doanh thu theo danh mục tháng 5/2025</Text>
-          <View style={styles.separator} />
-          
-          <View style={styles.pieChartContainer}>
-            <PieChart
-              data={[
-                {
-                  name: 'Đồ uống',
-                  population: 65,
-                  color: 'rgba(131, 167, 234, 1)',
-                  legendFontColor: '#7F7F7F',
-                  legendFontSize: 12
-                },
-                {
-                  name: 'Đồ ăn',
-                  population: 30,
-                  color: 'rgba(255, 165, 180, 1)',
-                  legendFontColor: '#7F7F7F',
-                  legendFontSize: 12
-                },
-                {
-                  name: 'Khác',
-                  population: 5,
-                  color: 'rgba(131, 227, 234, 1)',
-                  legendFontColor: '#7F7F7F',
-                  legendFontSize: 12
-                }
-              ]}
-              width={screenWidth - 60}
-              height={200}
-              chartConfig={chartConfig}
-              accessor="population"
-              backgroundColor="transparent"
-              paddingLeft="15"
-              absolute
-            />
+        {data.pie_chart_data && data.pie_chart_data.length > 0 && (
+          <View style={styles.statisticsBox}>
+            <Text style={styles.boxTitle}>Doanh thu theo danh mục tháng {selectedDate.getMonth() + 1}</Text>
+            <View style={styles.separator} />
+            <View style={styles.pieChartContainer}>
+              <PieChart
+                data={data.pie_chart_data}
+                width={screenWidth - 60}
+                height={200}
+                chartConfig={chartConfig}
+                accessor="population"
+                backgroundColor="transparent"
+                paddingLeft="15"
+                absolute
+              />
+            </View>
           </View>
-        </View>
+        )}
       </View>
     );
   };
 
-  // Render content dựa trên tab đang active
   const renderContent = () => {
     switch (activeTab) {
       case 'day':
@@ -336,47 +342,44 @@ export default function StatisticsScreen() {
           headerShown: false,
         }}
       />
-      
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.push('../HomeScreen')}
         >
           <Ionicons name="chevron-back" size={24} color="#333" />
         </TouchableOpacity>
-        
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>Quản lý thống kê</Text>
         </View>
       </View>
-      
       {/* Tabs */}
       <View style={styles.tabsContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tab, activeTab === 'day' && styles.activeTab]}
           onPress={() => setActiveTab('day')}
         >
           <Text style={[styles.tabText, activeTab === 'day' && styles.activeTabText]}>Ngày</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tab, activeTab === 'week' && styles.activeTab]}
           onPress={() => setActiveTab('week')}
         >
           <Text style={[styles.tabText, activeTab === 'week' && styles.activeTabText]}>Tuần</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.tab, activeTab === 'month' && styles.activeTab]}
           onPress={() => setActiveTab('month')}
         >
           <Text style={[styles.tabText, activeTab === 'month' && styles.activeTabText]}>Tháng</Text>
         </TouchableOpacity>
       </View>
+      {/* Date Picker */}
+      {renderDatePicker()}
       
       {/* Tab Content */}
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         {renderContent()}
       </ScrollView>
     </SafeAreaView>
@@ -437,7 +440,7 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  tabContent: {
+  scrollViewContent: {
     padding: 15,
   },
   statisticsBox: {
@@ -487,6 +490,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   chart: {
+    backgroundColor: '#fff',
     marginVertical: 8,
     borderRadius: 16,
   },
@@ -508,6 +512,7 @@ const styles = StyleSheet.create({
   topRank: {
     width: 25,
     height: 25,
+    lineHeight: 24,
     borderRadius: 15,
     backgroundColor: '#ff4757',
     color: '#fff',
@@ -527,5 +532,36 @@ const styles = StyleSheet.create({
     color: '#ff4757',
     textAlign: 'right',
     fontWeight: '500',
+  },
+  noDataText: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+  },
+  datePickerContainer: {
+    padding: 10,
+    alignItems: 'center',
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  dateButtonText: {
+    marginLeft: 5,
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  calendarIcon: {
+    marginRight: 8,
   },
 });

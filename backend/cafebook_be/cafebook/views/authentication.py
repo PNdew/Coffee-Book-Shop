@@ -9,10 +9,6 @@ from django.contrib.auth.hashers import check_password
 from datetime import datetime, timedelta
 from ..auth.jwt_handler import JWTHandler
 
-# Sử dụng JWT_SECRET từ biến môi trường
-JWT_SECRET = os.getenv('JWT_SECRET')
-JWT_ALGORITHM = os.getenv('JWT_ALGORITHM')
-
 # Hàm convert từ cursor -> dict
 def dictfetchone(cursor):
     columns = [col[0] for col in cursor.description]
@@ -66,20 +62,10 @@ def login_view(request):
         # Xác định quyền hạn dựa trên chức vụ
         is_admin = nhan_vien['IDChucVu'] == "1"  # "1" là mã của quản lý
         
-        # Tạo JWT token - đảm bảo bao gồm tên người dùng
-        payload = {
-            'SDTNV': nhan_vien['SDTNV'],  # Số điện thoại
-            'ChucVuNV': nhan_vien['IDChucVu'],  # ID chức vụ 
-            'TenNV': nhan_vien['TenNV'],  # Thêm tên người dùng vào payload
-            'exp': datetime.utcnow() + timedelta(days=1)  # Token hết hạn sau 1 ngày
-        }
-        
-        # Sử dụng SECRET_KEY và JWT_ALGORITHM từ settings
-        algorithm = getattr(settings, 'JWT_ALGORITHM', 'HS256')
-        token = jwt.encode(payload, settings.SECRET_KEY, algorithm=algorithm)
-        
+        jwt_handler = JWTHandler()
+        token = jwt_handler.generate_access_token(nhan_vien)
+
         print(f">>> Generated token: {token[:20]}...")
-        print(f">>> Token payload: {payload}")
         
         # Trả về cả thông tin người dùng và quyền hạn tương tự auth.py
         return Response({

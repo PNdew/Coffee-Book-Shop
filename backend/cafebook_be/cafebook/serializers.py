@@ -9,7 +9,7 @@ class SanphamSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sanpham
         fields = ['idsanpham', 'tensp', 'giasp', 'trangthaisp', 'loaisp']
-        read_only_fields = ['idsanpham']
+        # read_only_fields = ['idsanpham']
 
     def validate_giasp(self, value):
         # Chuyển đổi số nguyên thành Decimal nếu cần
@@ -206,4 +206,35 @@ class TaiKhoanSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     phone = serializers.CharField()
     password = serializers.CharField(write_only=True)
-        
+
+class RevenueDataSerializer(serializers.Serializer):
+    nhan = serializers.ListField(child=serializers.CharField())
+    du_lieu = serializers.ListField(child=serializers.DictField())
+    chu_thich = serializers.ListField(child=serializers.CharField())
+
+class PieChartDataSerializer(serializers.Serializer):
+    ten = serializers.CharField()
+    so_luong = serializers.IntegerField()
+    mau_sac = serializers.CharField()
+    mau_chu_chu_thich = serializers.CharField()
+    co_chu_chu_thich = serializers.IntegerField()
+
+class TopProductSerializer(serializers.Serializer):
+    hang = serializers.IntegerField()
+    ten = serializers.CharField()
+    so_luong = serializers.IntegerField()
+
+class StatisticsSerializer(serializers.Serializer):
+    # Thống kê theo ngày
+    tong_hoa_don = serializers.IntegerField()
+    tong_doanh_thu = serializers.DecimalField(max_digits=15, decimal_places=2)
+    tong_san_pham_ban = serializers.IntegerField()
+    tong_thuc_uong_ban = serializers.IntegerField()
+    tong_do_an_ban = serializers.IntegerField()
+    thuc_uong_ban_chay = serializers.CharField(allow_null=True)
+    do_an_ban_chay = serializers.CharField(allow_null=True)
+
+    # Dữ liệu theo tuần/tháng
+    bieu_do_doanh_thu = RevenueDataSerializer(required=False)
+    bieu_do_tron = serializers.ListField(child=PieChartDataSerializer(), required=False)
+    top_san_pham = serializers.ListField(child=TopProductSerializer(), required=False)
