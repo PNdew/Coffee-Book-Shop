@@ -8,6 +8,7 @@ class NguyenLieu(models.Model):
     
     class Meta:
         db_table = 'nguyenlieu'
+        managed = False  # Add this line
         verbose_name = "Nguyên liệu"
         verbose_name_plural = "Nguyên liệu"
         ordering = ['ten_nguyen_lieu']

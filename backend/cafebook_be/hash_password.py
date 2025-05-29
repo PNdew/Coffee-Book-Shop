@@ -15,15 +15,15 @@ def migrate_passwords():
     print(f"Tìm thấy {accounts.count()} tài khoản trong database")
     
     for account in accounts:
-        raw_password = account.MatKhauTK
-        print(f"Tài khoản {account.SDTNV}: {raw_password[:20]}...")  # In ra 20 ký tự đầu
+        raw_password = account.mat_khau
+        print(f"Tài khoản {account.id_tk}: {raw_password[:20]}...")  # In ra 20 ký tự đầu
         
         if not raw_password.startswith('pbkdf2_'):  # Kiểm tra xem đã hash chưa
-            print(f"  -> Đang hash mật khẩu cho {account.SDTNV}")
-            account.MatKhauTK = make_password(raw_password)
+            print(f"  -> Đang hash mật khẩu cho {account.id_tk}")
+            account.mat_khau = make_password(raw_password)
             account.save()
             updated_count += 1
-            print(f"  -> Đã lưu: {account.MatKhauTK[:50]}...")
+            print(f"  -> Đã lưu: {account.mat_khau[:50]}...")
         else:
             print(f"  -> Đã được hash rồi")
     

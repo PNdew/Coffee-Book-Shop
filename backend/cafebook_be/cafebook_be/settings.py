@@ -75,11 +75,11 @@ WSGI_APPLICATION = 'cafebook_be.wsgi.application'
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": "cafebook",
-        "USER": "long",
-        "PASSWORD": "12345",
+        "NAME": "cafebook1",
+        "USER": "root",
+        "PASSWORD": "12345678",
         "HOST": "127.0.0.1",
-        "PORT": "3307",
+        "PORT": "3306",
     }
 }
 
@@ -125,7 +125,7 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MIGRATION_MODULES = {
-    'cafebook': None,  # Tắt migration cho app cafebook
+    # 'cafebook': None,  # Tắt migration cho app cafebook
 }
 
 CORS_ALLOW_ALL_ORIGINS = True  # Cho phép tất cả các domain kết nối
@@ -170,3 +170,9 @@ JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
 
 print(f">>> Using SECRET_KEY: {SECRET_KEY[:20]}...")
 print(f">>> Using JWT_ALGORITHM: {JWT_ALGORITHM}")
+
+REST_FRAMEWORK = {
+    # 'DEFAULT_AUTHENTICATION_CLASSES': [
+    #     'rest_framework_simplejwt.authentication.JWTAuthentication',
+    # ],
+}

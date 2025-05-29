@@ -1,5 +1,5 @@
+import os
 from django.db import models
-
 class Voucher(models.Model):
     idvoucher = models.AutoField(primary_key=True, db_column="IDVoucher")
     tenvoucher = models.CharField(max_length=100, db_column="TenVoucher")
@@ -9,5 +9,5 @@ class Voucher(models.Model):
     thoigianketthucvoucher = models.DateTimeField(db_column="ThoiGianKetThucVoucher")
 
     class Meta:
-        managed = False
         db_table = 'voucher'
+        managed = False

@@ -5,7 +5,7 @@ from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 from datetime import datetime, timedelta
 import calendar
 
-from cafebook.models import Hoadon, Donghoadon
+from cafebook.models import HoaDon, DongHoaDon
 from cafebook.serializers import StatisticsSerializer
 
 class StatisticsView(APIView):
@@ -27,33 +27,33 @@ class StatisticsView(APIView):
 
     def thong_ke_ngay(self, ngay_str):
         ngay = datetime.strptime(ngay_str, '%Y-%m-%d').date()
-        hoadon_trong_ngay = Hoadon.objects.filter(ngayhd__date=ngay)
+        HoaDon_trong_ngay = HoaDon.objects.filter(ngayhd__date=ngay)
 
-        tong_so_hoadon = hoadon_trong_ngay.count()
-        tong_doanh_thu = Donghoadon.objects.filter(idhoadon__ngayhd__date=ngay) \
+        tong_so_HoaDon = HoaDon_trong_ngay.count()
+        tong_doanh_thu = DongHoaDon.objects.filter(idHoaDon__ngayhd__date=ngay) \
             .annotate(tong_tien=ExpressionWrapper(F('soluongsp') * F('idsanpham__giasp'), output_field=DecimalField())) \
             .aggregate(tong=Sum('tong_tien'))['tong'] or 0
 
-        dong_hoadon = Donghoadon.objects.filter(idhoadon__ngayhd__date=ngay).select_related('idsanpham')
+        dong_HoaDon = DongHoaDon.objects.filter(idHoaDon__ngayhd__date=ngay).select_related('idsanpham')
 
-        tong_san_pham = dong_hoadon.aggregate(tong=Sum('soluongsp'))['tong'] or 0
-        tong_thuc_uong = dong_hoadon.filter(idsanpham__loaisp='DoUong').aggregate(tong=Sum('soluongsp'))['tong'] or 0
-        tong_do_an = dong_hoadon.filter(idsanpham__loaisp='DoAn').aggregate(tong=Sum('soluongsp'))['tong'] or 0
+        tong_san_pham = dong_HoaDon.aggregate(tong=Sum('soluongsp'))['tong'] or 0
+        tong_thuc_uong = dong_HoaDon.filter(idsanpham__loaisp='DoUong').aggregate(tong=Sum('soluongsp'))['tong'] or 0
+        tong_do_an = dong_HoaDon.filter(idsanpham__loaisp='DoAn').aggregate(tong=Sum('soluongsp'))['tong'] or 0
 
-        thuc_uong_ban_chay = dong_hoadon.filter(idsanpham__loaisp='DoUong') \
+        thuc_uong_ban_chay = dong_HoaDon.filter(idsanpham__loaisp='DoUong') \
             .values('idsanpham__idsanpham', 'idsanpham__tensp') \
             .annotate(tong=Sum('soluongsp')) \
             .order_by('-tong') \
             .first()
 
-        do_an_ban_chay = dong_hoadon.filter(idsanpham__loaisp='DoAn') \
+        do_an_ban_chay = dong_HoaDon.filter(idsanpham__loaisp='DoAn') \
             .values('idsanpham__idsanpham', 'idsanpham__tensp') \
             .annotate(tong=Sum('soluongsp')) \
             .order_by('-tong') \
             .first()
 
         du_lieu = {
-            'tong_hoa_don': tong_so_hoadon,
+            'tong_hoa_don': tong_so_HoaDon,
             'tong_doanh_thu': tong_doanh_thu,
             'tong_san_pham_ban': tong_san_pham,
             'tong_thuc_uong_ban': tong_thuc_uong,
@@ -69,24 +69,24 @@ class StatisticsView(APIView):
         dau_tuan = ngay - timedelta(days=ngay.weekday())
         cuoi_tuan = dau_tuan + timedelta(days=6)
 
-        hoa_don = Hoadon.objects.filter(ngayhd__date__range=[dau_tuan, cuoi_tuan])
+        hoa_don = HoaDon.objects.filter(ngayhd__date__range=[dau_tuan, cuoi_tuan])
         tong_hoa_don = hoa_don.count()
 
-        dong_hoadon = Donghoadon.objects.filter(idhoadon__ngayhd__date__range=[dau_tuan, cuoi_tuan])
-        tong_doanh_thu = dong_hoadon \
+        dong_HoaDon = DongHoaDon.objects.filter(idHoaDon__ngayhd__date__range=[dau_tuan, cuoi_tuan])
+        tong_doanh_thu = dong_HoaDon \
             .annotate(tong_tien=ExpressionWrapper(F('soluongsp') * F('idsanpham__giasp'), output_field=DecimalField())) \
             .aggregate(tong=Sum('tong_tien'))['tong'] or 0
 
-        tong_san_pham = dong_hoadon.aggregate(tong=Sum('soluongsp'))['tong'] or 0
-        tong_thuc_uong = dong_hoadon.filter(idsanpham__loaisp='DoUong').aggregate(tong=Sum('soluongsp'))['tong'] or 0
-        tong_do_an = dong_hoadon.filter(idsanpham__loaisp='DoAn').aggregate(tong=Sum('soluongsp'))['tong'] or 0
+        tong_san_pham = dong_HoaDon.aggregate(tong=Sum('soluongsp'))['tong'] or 0
+        tong_thuc_uong = dong_HoaDon.filter(idsanpham__loaisp='DoUong').aggregate(tong=Sum('soluongsp'))['tong'] or 0
+        tong_do_an = dong_HoaDon.filter(idsanpham__loaisp='DoAn').aggregate(tong=Sum('soluongsp'))['tong'] or 0
 
         # Biểu đồ doanh thu từng ngày trong tuần
         du_lieu_doanh_thu = []
         nhan = [(dau_tuan + timedelta(days=i)).strftime('%d/%m') for i in range(7)]
         for i in range(7):
             ngay_trong_tuan = dau_tuan + timedelta(days=i)
-            doanh_thu_ngay = Donghoadon.objects.filter(idhoadon__ngayhd__date=ngay_trong_tuan) \
+            doanh_thu_ngay = DongHoaDon.objects.filter(idHoaDon__ngayhd__date=ngay_trong_tuan) \
                 .annotate(tong_tien=ExpressionWrapper(F('soluongsp') * F('idsanpham__giasp'), output_field=DecimalField())) \
                 .aggregate(tong=Sum('tong_tien'))['tong'] or 0
             du_lieu_doanh_thu.append(doanh_thu_ngay)
@@ -102,7 +102,7 @@ class StatisticsView(APIView):
         }
 
         # Top 5 sản phẩm
-        top_san_pham = dong_hoadon \
+        top_san_pham = dong_HoaDon \
             .values('idsanpham__tensp') \
             .annotate(soluong=Sum('soluongsp')) \
             .order_by('-soluong')[:5]
@@ -123,12 +123,12 @@ class StatisticsView(APIView):
         ]
 
         # Sản phẩm DoUong và DoAn bán chạy nhất
-        thuc_uong_ban_chay = dong_hoadon.filter(idsanpham__loaisp='DoUong') \
+        thuc_uong_ban_chay = dong_HoaDon.filter(idsanpham__loaisp='DoUong') \
             .values('idsanpham__tensp') \
             .annotate(tong=Sum('soluongsp')) \
             .order_by('-tong').first()
 
-        do_an_ban_chay = dong_hoadon.filter(idsanpham__loaisp='DoAn') \
+        do_an_ban_chay = dong_HoaDon.filter(idsanpham__loaisp='DoAn') \
             .values('idsanpham__tensp') \
             .annotate(tong=Sum('soluongsp')) \
             .order_by('-tong').first()
@@ -156,26 +156,26 @@ class StatisticsView(APIView):
         dau_thang = ngay.replace(day=1)
         cuoi_thang = ngay.replace(day=cuoi_thang)
 
-        hoa_don = Hoadon.objects.filter(ngayhd__date__range=[dau_thang, cuoi_thang])
-        dong_hoadon = Donghoadon.objects.filter(idhoadon__ngayhd__date__range=[dau_thang, cuoi_thang])
+        hoa_don = HoaDon.objects.filter(ngayhd__date__range=[dau_thang, cuoi_thang])
+        dong_HoaDon = DongHoaDon.objects.filter(idHoaDon__ngayhd__date__range=[dau_thang, cuoi_thang])
 
         tong_hoa_don = hoa_don.count()
-        tong_doanh_thu = dong_hoadon.annotate(
+        tong_doanh_thu = dong_HoaDon.annotate(
             tong_tien=ExpressionWrapper(F('soluongsp') * F('idsanpham__giasp'), output_field=DecimalField())
         ).aggregate(tong=Sum('tong_tien'))['tong'] or 0
 
-        tong_san_pham = dong_hoadon.aggregate(tong=Sum('soluongsp'))['tong'] or 0
-        tong_thuc_uong = dong_hoadon.filter(idsanpham__loaisp='DoUong').aggregate(tong=Sum('soluongsp'))['tong'] or 0
-        tong_do_an = dong_hoadon.filter(idsanpham__loaisp='DoAn').aggregate(tong=Sum('soluongsp'))['tong'] or 0
+        tong_san_pham = dong_HoaDon.aggregate(tong=Sum('soluongsp'))['tong'] or 0
+        tong_thuc_uong = dong_HoaDon.filter(idsanpham__loaisp='DoUong').aggregate(tong=Sum('soluongsp'))['tong'] or 0
+        tong_do_an = dong_HoaDon.filter(idsanpham__loaisp='DoAn').aggregate(tong=Sum('soluongsp'))['tong'] or 0
 
         # Biểu đồ doanh thu từng tháng trong năm
         du_lieu_doanh_thu = []
         nhan = [f'T{m}' for m in range(1, 13)]
 
         for m in range(1, 13):
-            doanh_thu_thang = Donghoadon.objects.filter(
-                idhoadon__ngayhd__year=nam,
-                idhoadon__ngayhd__month=m
+            doanh_thu_thang = DongHoaDon.objects.filter(
+                idHoaDon__ngayhd__year=nam,
+                idHoaDon__ngayhd__month=m
             ).annotate(tong_tien=ExpressionWrapper(
                 F('soluongsp') * F('idsanpham__giasp'),
                 output_field=DecimalField()
@@ -194,7 +194,7 @@ class StatisticsView(APIView):
         }
 
         # Top 5 sản phẩm
-        top_san_pham = dong_hoadon \
+        top_san_pham = dong_HoaDon \
             .values('idsanpham__tensp') \
             .annotate(soluong=Sum('soluongsp')) \
             .order_by('-soluong')[:5]
@@ -208,7 +208,7 @@ class StatisticsView(APIView):
         ]
 
         # Biểu đồ tròn theo loại sản phẩm
-        theo_loai = dong_hoadon.values('idsanpham__loaisp') \
+        theo_loai = dong_HoaDon.values('idsanpham__loaisp') \
             .annotate(soluong=Sum('soluongsp')) \
             .order_by('-soluong')
 
@@ -224,12 +224,12 @@ class StatisticsView(APIView):
         ]
 
         # Thức uống & DoAn bán chạy
-        thuc_uong_ban_chay = dong_hoadon.filter(idsanpham__loaisp='DoUong') \
+        thuc_uong_ban_chay = dong_HoaDon.filter(idsanpham__loaisp='DoUong') \
             .values('idsanpham__tensp') \
             .annotate(tong=Sum('soluongsp')) \
             .order_by('-tong').first()
 
-        do_an_ban_chay = dong_hoadon.filter(idsanpham__loaisp='DoAn') \
+        do_an_ban_chay = dong_HoaDon.filter(idsanpham__loaisp='DoAn') \
             .values('idsanpham__tensp') \
             .annotate(tong=Sum('soluongsp')) \
             .order_by('-tong').first()

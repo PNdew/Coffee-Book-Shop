@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Sanpham, Voucher, Donghoadon, Hoadon, NguyenLieu, Sach, TheLoai, TheLoaiCuaSach
+from .models import SanPham, Voucher, DongHoaDon, HoaDon, NguyenLieu, Sach, TheLoai, TheLoaiCuaSach
 from django.db import connection
 from .models.rolls import ChucVu
 from .models.user import NhanVien, TaiKhoan
@@ -7,7 +7,7 @@ from .models.permission import NhomQuyen, Quyen
 
 class SanphamSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Sanpham
+        model = SanPham
         fields = ['idsanpham', 'tensp', 'giasp', 'trangthaisp', 'loaisp']
         # read_only_fields = ['idsanpham']
 
@@ -22,12 +22,12 @@ class VoucherSerializer(serializers.ModelSerializer):
         model = Voucher
         fields = '__all__'
 
-class DonghoadonSerializer(serializers.ModelSerializer):
+class DonghoadonSerializer(serializers.ModelSerializer):  # Đổi tên class để khớp với import
     sanpham_info = serializers.SerializerMethodField()
     voucher_info = serializers.SerializerMethodField()
     
     class Meta:
-        model = Donghoadon
+        model = DongHoaDon
         fields = ['idhoadon', 'sottdong', 'idsanpham', 'soluongsp', 'ghichu', 'idvoucher', 'sanpham_info', 'voucher_info']
     
     def get_sanpham_info(self, obj):
@@ -45,30 +45,30 @@ class DonghoadonSerializer(serializers.ModelSerializer):
             return None
         return VoucherSerializer(obj.idvoucher).data
 
-class HoadonSerializer(serializers.ModelSerializer):
-    donghoadon = serializers.SerializerMethodField()
+class HoadonSerializer(serializers.ModelSerializer):  # Đổi HoaDonSerializer thành HoadonSerializer
+    DongHoaDon = serializers.SerializerMethodField()
     
     class Meta:
-        model = Hoadon
-        fields = ['idhoadon', 'ngayhd', 'idnhanvien', 'donghoadon']
+        model = HoaDon
+        fields = ['idHoaDon', 'ngayhd', 'idnhanvien', 'DongHoaDon']
     
-    def get_donghoadon(self, obj):
+    def get_DongHoaDon(self, obj):
         try:
             # Sử dụng raw SQL để debug và xác định chính xác nguyên nhân
             with connection.cursor() as cursor:
                 cursor.execute("""
                     SELECT dh.SoTTDong, dh.IDSanPham, dh.SoLuongSP, dh.GhiChu, dh.IDVoucher,
                            sp.tensp, sp.giasp, sp.loaisp
-                    FROM donghoadon dh
+                    FROM DongHoaDon dh
                     JOIN sanpham sp ON dh.IDSanPham = sp.idsanpham
                     WHERE dh.IDHoaDon = %s
                     ORDER BY dh.SoTTDong
-                """, [obj.idhoadon])
+                """, [obj.idHoaDon])
                 dong_hoa_don_data = cursor.fetchall()
                 
             # Nếu không có dữ liệu từ raw query, thử dùng ORM bình thường
             if not dong_hoa_don_data:
-                dong_hoa_don = Donghoadon.objects.filter(idhoadon=obj).order_by('sottdong')
+                dong_hoa_don = DongHoaDon.objects.filter(idHoaDon=obj).order_by('sottdong')
                 return DonghoadonSerializer(dong_hoa_don, many=True).data
             
             # Chuyển đổi dữ liệu từ raw query thành cấu trúc tương thích với serializer
@@ -87,7 +87,7 @@ class HoadonSerializer(serializers.ModelSerializer):
                 
                 # Tạo cấu trúc dữ liệu dòng hóa đơn
                 dong_hoa_don_item = {
-                    'idhoadon': obj.idhoadon,
+                    'idHoaDon': obj.idHoaDon,
                     'sottdong': so_tt_dong,
                     'idsanpham': id_san_pham,
                     'soluongsp': so_luong_sp,

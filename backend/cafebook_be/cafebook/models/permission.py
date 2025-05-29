@@ -2,7 +2,7 @@ from django.db import models
 from .rolls import ChucVu
 
 class Quyen(models.Model):
-    idquyen = models.CharField(max_length=50, primary_key=True, unique=True, db_column='idquyen')
+    idquyen = models.CharField(max_length=50, primary_key=True, db_column='idquyen')
     chucnang = models.CharField(max_length=100, db_column='module')
     hanhdong = models.CharField(max_length=100, db_column='action')
     kyhieu = models.CharField(max_length=100, db_column='code')
@@ -11,11 +11,10 @@ class Quyen(models.Model):
         db_table = 'quyen'
         managed = False
 
-    def __str__(self):
-        return self.ten_quyen
+
 
 class NhomQuyen(models.Model):
-    idnhomquyen = models.CharField(max_length=50, primary_key=True, unique=True, db_column='idnhomquyen')
+    idnhomquyen = models.CharField(max_length=50, primary_key=True, db_column='idnhomquyen')
     tennhomquyen = models.CharField(max_length=100, db_column='tennhomquyen')
     mota = models.CharField(max_length=100, db_column='mota')
 
@@ -23,8 +22,6 @@ class NhomQuyen(models.Model):
         db_table = 'nhomquyen'
         managed = False
 
-    def __str__(self):
-        return self.ten_nhom
 
 class NhomQuyen_Quyen(models.Model):
     idnhomquyen = models.ForeignKey(NhomQuyen, on_delete=models.CASCADE, db_column='idnhomquyen')
@@ -35,11 +32,12 @@ class NhomQuyen_Quyen(models.Model):
         unique_together = ('idnhomquyen', 'idquyen')
         managed = False
 
+
 class ChucVu_Quyen(models.Model):
     idchucvu = models.ForeignKey(ChucVu, on_delete=models.CASCADE, db_column='idchucvu')
     idnhomquyen = models.ForeignKey(NhomQuyen, on_delete=models.CASCADE, db_column='idnhomquyen')
 
     class Meta:
         db_table = 'chucvu_nhomquyen'
-        managed = False
         unique_together = ('idchucvu', 'idnhomquyen')
+        managed = False

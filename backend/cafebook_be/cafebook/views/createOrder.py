@@ -1,7 +1,7 @@
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
-from cafebook.models import Hoadon, Donghoadon, NhanVien, Sanpham, Voucher
+from cafebook.models import HoaDon, DongHoaDon, NhanVien, SanPham, Voucher
 from django.utils import timezone
 from django.db import transaction
 from cafebook.serializers import DonghoadonSerializer
@@ -24,7 +24,7 @@ def createOrder(request):
         except NhanVien.DoesNotExist:
             return JsonResponse({'error': 'Nhân viên không tồn tại'}, status=404)
 
-        hoadon = Hoadon.objects.create(
+        hoadon = HoaDon.objects.create(
             ngayhd=timezone.now(),
             idnhanvien=nhanvien
         )
@@ -50,21 +50,21 @@ def createOrderDetails(request):
             return JsonResponse({'error': 'Thiếu idhoadon hoặc danh sách sản phẩm'}, status=400)
 
         try:
-            hoadon = Hoadon.objects.get(pk=idhoadon)
-        except Hoadon.DoesNotExist:
+            hoadon = HoaDon.objects.get(pk=idhoadon)
+        except HoaDon.DoesNotExist:
             return JsonResponse({'error': 'Hóa đơn không tồn tại'}, status=404)
 
         with transaction.atomic():
             # Lấy số dòng đã tồn tại trước khi bắt đầu
-            existing_lines = Donghoadon.objects.filter(idhoadon=hoadon).count()
+            existing_lines = DongHoaDon.objects.filter(idhoadon=hoadon).count()
 
             for index, item in enumerate(items):
                 idsanpham = item.get('idsanpham')
                 soluongsp = item.get('soluongsp')
 
                 try:
-                    sanpham = Sanpham.objects.get(pk=idsanpham)
-                except Sanpham.DoesNotExist:
+                    sanpham = SanPham.objects.get(pk=idsanpham)
+                except SanPham.DoesNotExist:
                     raise Exception(f"Sản phẩm ID {idsanpham} không tồn tại")
 
                 voucher = None

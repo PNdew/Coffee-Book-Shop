@@ -5,11 +5,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+
 class JWTHandler:
     def __init__(self):
         self.secret = os.getenv('JWT_SECRET')
         self.algorithm = os.getenv('JWT_ALGORITHM', 'HS256')
-
     def generate_access_token(self, nhan_vien):
         """Tạo access token với thông tin nhân viên"""
         payload = {

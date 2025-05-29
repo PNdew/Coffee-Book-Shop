@@ -1,8 +1,8 @@
 from .user import NhanVien, TaiKhoan
-from .product import Sanpham
+from .product import SanPham
 from .voucher import Voucher
-from .invoiceline import Donghoadon
-from .invoice import Hoadon
+from .invoiceline import DongHoaDon
+from .invoice import HoaDon
 from .ingredient import NguyenLieu
 from .book import Sach
 from .attendance import Attendance

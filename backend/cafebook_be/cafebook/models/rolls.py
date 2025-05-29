@@ -6,3 +6,7 @@ class ChucVu(models.Model):
 
     class Meta:
         db_table = 'chucvu'
+        managed = False
+
+    def __str__(self):
+        return self.loaichucvu

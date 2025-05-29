@@ -2,8 +2,13 @@ from django.shortcuts import render
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from cafebook.models import Sanpham, Voucher, Donghoadon, Hoadon, NhanVien
-from cafebook.serializers import SanphamSerializer, VoucherSerializer, DonghoadonSerializer, HoadonSerializer
+from cafebook.models import SanPham, Voucher, DongHoaDon, HoaDon, NhanVien
+from cafebook.serializers import (
+    SanphamSerializer, 
+    VoucherSerializer, 
+    DonghoadonSerializer, 
+    HoadonSerializer  # Changed from HoaDonSerializer to HoadonSerializer
+)
 from django.utils import timezone
 from django.db import transaction
 from ..permissions import IsAuthenticatedWithJWT
@@ -13,7 +18,7 @@ import datetime
 
 # ViewSets mặc định cho các model đơn
 class SanphamViewSet(viewsets.ModelViewSet):
-    queryset = Sanpham.objects.all()
+    queryset = SanPham.objects.all()
     serializer_class = SanphamSerializer
     # permission_classes = [IsAuthenticatedWithJWT]
 
@@ -38,9 +43,8 @@ class SanphamViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class HoadonViewSet(viewsets.ModelViewSet):
-    queryset = Hoadon.objects.all().order_by('-ngayhd')
-    serializer_class = HoadonSerializer
-    # permission_classes = [IsAuthenticatedWithJWT]
+    queryset = HoaDon.objects.all()
+    serializer_class = HoadonSerializer  # Changed to match the serializer name
     
     @action(detail=True, methods=['get'])
     def dong_hoa_don(self, request, pk=None):
@@ -116,7 +120,7 @@ class HoadonViewSet(viewsets.ModelViewSet):
             
             # Lấy sản phẩm
             sanpham_ids = []
-            sanphams = Sanpham.objects.all()[:5]
+            sanphams = SanPham.objects.all()[:5]
             for sanpham in sanphams:
                 sanpham_ids.append(sanpham.idsanpham)
             
@@ -124,16 +128,16 @@ class HoadonViewSet(viewsets.ModelViewSet):
                 return Response({"error": "Không có sản phẩm nào trong hệ thống"}, status=status.HTTP_400_BAD_REQUEST)
             
             # Tạo hóa đơn
-            hoadon = Hoadon.objects.create(
+            hoadon = HoaDon.objects.create(
                 ngayhd=timezone.now(),
                 idnhanvien=nhanvien
             )
             
             # Tạo các dòng hóa đơn
             for i, sanpham_id in enumerate(sanpham_ids, 1):
-                sanpham = Sanpham.objects.get(idsanpham=sanpham_id)
+                sanpham = SanPham.objects.get(idsanpham=sanpham_id)
                 soluong = i  # Số lượng mẫu
-                Donghoadon.objects.create(
+                DongHoaDon.objects.create(
                     idhoadon=hoadon,
                     sottdong=i,
                     idsanpham=sanpham,
@@ -149,7 +153,7 @@ class HoadonViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class DonghoadonViewSet(viewsets.ModelViewSet):
-    queryset = Donghoadon.objects.all()
+    queryset = DongHoaDon.objects.all()
     serializer_class = DonghoadonSerializer
     # permission_classes = [IsAuthenticatedWithJWT]
     def perform_create(self, serializer):
@@ -157,7 +161,7 @@ class DonghoadonViewSet(viewsets.ModelViewSet):
 
         if idhoadon:
             # Đếm số dòng hiện có với idhoadon để tạo số thứ tự dòng mới
-            existing_lines = Donghoadon.objects.filter(idhoadon=idhoadon).count()
+            existing_lines = DongHoaDon.objects.filter(idhoadon=idhoadon).count()
             # Sử dụng existing_lines để tạo số thứ tự dòng (SoTTDong)
             serializer.save(idhoadon_id=idhoadon, sottdong=existing_lines + 1)
         else:
@@ -167,7 +171,7 @@ class DonghoadonViewSet(viewsets.ModelViewSet):
         """
         Lọc queryset theo các tham số nếu có
         """
-        queryset = Donghoadon.objects.all()
+        queryset = DongHoaDon.objects.all()
         
         # Lọc theo hóa đơn nếu có tham số idhoadon
         idhoadon = self.request.query_params.get('idhoadon')
@@ -184,21 +188,21 @@ class DonghoadonViewSet(viewsets.ModelViewSet):
 # Các API đơn giản khác
 @api_view(['GET'])
 def get_sanpham_list(request):
-    sanphams = Sanpham.objects.all()
+    sanphams = SanPham.objects.all()
     serializer = SanphamSerializer(sanphams, many=True)
     return Response(serializer.data)
 
 @api_view(['GET'])
 def get_sanpham_detail(request, pk):
     try:
-        sanpham = Sanpham.objects.get(idsanpham=pk)
+        sanpham = SanPham.objects.get(idsanpham=pk)
         serializer = SanphamSerializer(sanpham)
         return Response(serializer.data)
-    except Sanpham.DoesNotExist:
+    except SanPham.DoesNotExist:
         return Response({'error': 'Sản phẩm không tồn tại'}, status=404)
 
 @api_view(['GET'])
 def get_donghoadon_by_voucher(request, voucher_id):
-    donghoadons = Donghoadon.objects.filter(voucher__idvoucher=voucher_id)
+    donghoadons = DongHoaDon.objects.filter(voucher__idvoucher=voucher_id)
     serializer = DonghoadonSerializer(donghoadons, many=True)
     return Response(serializer.data)
