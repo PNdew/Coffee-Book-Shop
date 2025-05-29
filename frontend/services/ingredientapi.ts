@@ -34,12 +34,15 @@ export const ingredientService = {
     try {
       console.log('Gọi API tại:', `${API_URL}/nguyenlieu/`);
       const token = await getAuthToken();
+      console.log('Token:', token ? token.substring(0, 20) + '...' : 'null');
+      
       const response = await axios.get(`${API_URL}/nguyenlieu/`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : '',
         }
       });
-      // console.log('Dữ liệu nhận được:', response.data);
+      console.log('Response status:', response.status);
+      console.log('Response data:', response.data);
       
       // Xử lý cả hai trường hợp:
       // 1. Nếu dữ liệu là mảng (không có phân trang): trả về trực tiếp
@@ -55,6 +58,11 @@ export const ingredientService = {
       return [];
     } catch (error) {
       console.error('Lỗi khi lấy danh sách nguyên liệu:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Status:', error.response?.status);
+        console.error('Data:', error.response?.data);
+        console.error('Headers:', error.response?.headers);
+      }
       throw error;
     }
   },

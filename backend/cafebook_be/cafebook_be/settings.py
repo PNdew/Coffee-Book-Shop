@@ -1,13 +1,11 @@
 import os
 # Fix import cho dotenv==0.9.9
-try:
-    from dotenv import load_dotenv
-except ImportError:
-    # Fallback nếu không có dotenv
-    def load_dotenv():
-        pass
+from dotenv import load_dotenv
 from pathlib import Path
 from corsheaders.defaults import default_headers
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -15,9 +13,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-cq7fvh48u7i*$rpje6)4l$hysiq=x7d#(04krwovr^0*9$1sx5'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -36,6 +31,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'cafebook',
+    'cloudinary',
+    'cloudinary_storage',
 ]
 
 MIDDLEWARE = [
@@ -76,8 +73,8 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "cafebook",
-        "USER": "long",
-        "PASSWORD": "12345",
+        "USER": "root",
+        "PASSWORD": "1234",
         "HOST": "127.0.0.1",
         "PORT": "3307",
     }
@@ -150,6 +147,10 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     "x-requested-with",
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8081",
+]
+
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',
@@ -163,10 +164,26 @@ CORS_ALLOW_METHODS = [
 load_dotenv()
 
 # Chỉ override nếu có trong .env
-if os.getenv('SECRET_KEY'):
-    SECRET_KEY = os.getenv('SECRET_KEY')
-    
+SECRET_KEY = os.getenv('SECRET_KEY')    
 JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
 
-print(f">>> Using SECRET_KEY: {SECRET_KEY[:20]}...")
-print(f">>> Using JWT_ALGORITHM: {JWT_ALGORITHM}")
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+
+
+# Cấu hình Cloudinary
+cloudinary.config(
+    cloud_name = "dkcimhkbd",
+    api_key = "457916959333723",
+    api_secret = "SvAQrpU83idDW_8f18vbUo2W1yI",
+    secure = True
+)
+
+# Media files configuration
+MEDIA_URL = '/media/'
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+

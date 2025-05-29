@@ -7,6 +7,8 @@ import BackButton from '@/components/createorder/BackButton';
 import OrderItem from '@/components/createorder/OrderItem';
 import { OrderItem as OrderItemType, Voucher } from '@/types';
 import { fetchSanpham, convertSanphamToOrderItem } from '@/services/createorderapi';
+import { getUserFromToken } from '@/services/authapi';
+import { checkPermissionAPI } from '@/services/checkpermissionapi';
 
 export default function CreateOrderScreen() {
   const router = useRouter();
@@ -21,37 +23,79 @@ export default function CreateOrderScreen() {
   const [searchResults, setSearchResults] = useState<OrderItemType[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [permissions, setPermissions] = useState({
+    canCreate: false
+  });
 
   // Tính tổng tiền trước khi áp dụng voucher
   const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   
   // Tính số tiền giảm từ voucher
   const discountAmount = activeVoucher 
-    ? activeVoucher.discountType === 'percentage'
-      ? (subtotal * parseFloat(activeVoucher.discountValue) / 100)
-      : parseFloat(activeVoucher.discountValue)
+    ? activeVoucher.loaisp === 'percentage'
+      ? (subtotal * activeVoucher.giamgia / 100)
+      : activeVoucher.giamgia
     : 0;
   
   // Tổng tiền sau khi áp dụng voucher
   const totalAmount = Math.max(0, subtotal - discountAmount);
 
-  // Fetch tất cả sản phẩm khi component mount
   useEffect(() => {
-    const fetchAllProducts = async () => {
-      try {
-        setIsLoading(true);
-        const sanphamData = await fetchSanpham();
-        const productItems = sanphamData.map(item => convertSanphamToOrderItem(item));
-        setAllProducts(productItems);
-      } catch (err) {
-        console.error('Failed to fetch all products:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
+    checkUserPermissions();
     fetchAllProducts();
   }, []);
+
+  const checkUserPermissions = async () => {
+    try {
+      // Get user info from token
+      const user = await getUserFromToken();
+
+      if (!user) {
+        // No token or invalid token
+        setPermissions({
+          canCreate: false
+        });
+        return;
+      }
+
+      // Check order create permission
+      const canCreate = await checkPermissionAPI(user.ChucVuNV, 'order.create');
+
+      setPermissions({
+        canCreate
+      });
+
+      // If user doesn't have create permission, redirect to home
+      if (!canCreate) {
+        Alert.alert(
+          "Thông báo",
+          "Bạn không có quyền tạo hóa đơn.",
+          [
+            { 
+              text: "Đã hiểu",
+              onPress: () => router.push('../HomeScreen')
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+    }
+  };
+
+  // Fetch tất cả sản phẩm khi component mount
+  const fetchAllProducts = async () => {
+    try {
+      setIsLoading(true);
+      const sanphamData = await fetchSanpham();
+      const productItems = sanphamData.map(item => convertSanphamToOrderItem(item));
+      setAllProducts(productItems);
+    } catch (err) {
+      console.error('Failed to fetch all products:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleIncrement = (id: string) => {
     setItems(items.map(item => 
@@ -110,6 +154,15 @@ export default function CreateOrderScreen() {
   }, [items, isSearching]);
 
   const handleConfirm = () => {
+    if (!permissions.canCreate) {
+      Alert.alert(
+        "Thông báo",
+        "Bạn không có quyền tạo hóa đơn.",
+        [{ text: "Đã hiểu" }]
+      );
+      return;
+    }
+
     if (items.length === 0) {
       Alert.alert('Thông báo', 'Vui lòng chọn ít nhất một sản phẩm');
       return;
@@ -311,6 +364,23 @@ export default function CreateOrderScreen() {
     );
   };
 
+  // If user doesn't have create permission, show error
+  if (!permissions.canCreate && !isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centeredContent}>
+          <Text style={styles.errorText}>Bạn không có quyền tạo hóa đơn.</Text>
+          <TouchableOpacity
+            style={styles.backToHomeButton}
+            onPress={() => router.push('../HomeScreen')}
+          >
+            <Text style={styles.backToHomeText}>Quay về trang chủ</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -401,7 +471,7 @@ export default function CreateOrderScreen() {
               >
                 <Text style={styles.voucherLabel}>Voucher</Text>
                 <Text style={styles.voucherValue}>
-                  {activeVoucher ? activeVoucher.title : 'Chọn voucher'}
+                  {activeVoucher ? activeVoucher.tenvoucher : 'Chọn voucher'}
                 </Text>
               </TouchableOpacity>
               
@@ -658,5 +728,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#f74848',
     fontWeight: '500',
+  },
+  centeredContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#d32f2f',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  backToHomeButton: {
+    backgroundColor: '#E4434A',
+    padding: 10,
+    borderRadius: 5,
+  },
+  backToHomeText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

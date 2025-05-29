@@ -1,46 +1,115 @@
 from django.shortcuts import render
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import api_view
 from cafebook.models import Sanpham, Voucher, Donghoadon, Hoadon, NhanVien
 from cafebook.serializers import SanphamSerializer, VoucherSerializer, DonghoadonSerializer, HoadonSerializer
 from django.utils import timezone
-from django.db import transaction
 from ..permissions import IsAuthenticatedWithJWT
 from rest_framework.decorators import action
 from django.db import connection
-import datetime
+from ..cloudinary_service import upload_image_to_cloudinary
+import re  # Thêm thư viện regex ở đầu file
 
-# ViewSets mặc định cho các model đơn
 class SanphamViewSet(viewsets.ModelViewSet):
     queryset = Sanpham.objects.all()
     serializer_class = SanphamSerializer
-    # permission_classes = [IsAuthenticatedWithJWT]
+    permission_classes = [IsAuthenticatedWithJWT]
 
     def create(self, request, *args, **kwargs):
         try:
-            serializer = self.get_serializer(data=request.data)
-            if serializer.is_valid():
-                print("Data validated:", serializer.validated_data)
-                self.perform_create(serializer)
-                return Response({
-                    "message": "Tạo sản phẩm thành công",
-                    "data": serializer.data
-                }, status=status.HTTP_201_CREATED)
-            print("Serializer errors:", serializer.errors)
+            data = request.data.copy()
+
+            # Kiểm tra giá âm
+            gia = data.get('giasp', 0)
+            if gia < 0:
+                return Response(
+                    {"error": "Giá sản phẩm không được nhỏ hơn 0"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Kiểm tra tên sản phẩm
+            ten_san_pham = data.get('tensp', '').strip()
+
+            # Regex: chỉ cho phép chữ cái, số, khoảng trắng và một số ký tự cơ bản (.,-)
+            if not re.match(r'^[\w\s\.,\-àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđĐ]+$', ten_san_pham, re.UNICODE):
+                return Response(
+                    {"error": "Tên sản phẩm chứa ký tự không hợp lệ"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            if Sanpham.objects.filter(tensp__iexact=ten_san_pham).exists():
+                return Response(
+                    {"error": f"Tên sản phẩm '{ten_san_pham}' đã tồn tại"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            file = request.FILES.get("hinhanh")
+            if file:
+                image_url = upload_image_to_cloudinary(file)
+                data["hinhanh"] = image_url
+
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
             return Response({
-                "error": serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+                "message": "Tạo sản phẩm thành công",
+                "data": serializer.data
+            }, status=status.HTTP_201_CREATED)
         except Exception as e:
-            print("Exception in create:", str(e))
             return Response({
                 "error": f"Lỗi khi tạo sản phẩm: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    def update(self, request, *args, **kwargs):
+
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        data = request.data.copy()
+
+        # Kiểm tra giá âm
+        gia = data.get('giasp', 0)
+        if gia < 0:
+            return Response(
+                {"error": "Giá sản phẩm không được nhỏ hơn 0"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+            # Kiểm tra tên sản phẩm
+        ten_san_pham = data.get('tensp', '').strip()
+
+            # Regex: chỉ cho phép chữ cái, số, khoảng trắng và một số ký tự cơ bản (.,-)
+        if not re.match(r'^[\w\s\.,\-àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđĐ]+$', ten_san_pham, re.UNICODE):
+            return Response(
+                {"error": "Tên sản phẩm chứa ký tự không hợp lệ"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if Sanpham.objects.filter(tensp__iexact=ten_san_pham).exists():
+            return Response(
+                {"error": f"Tên sản phẩm '{ten_san_pham}' đã tồn tại"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        file = request.FILES.get("hinhanh")
+        if file:
+            image_url = upload_image_to_cloudinary(file)
+            print(f"Image URL: {image_url}")  # Thêm dòng này để debug
+            data["hinhanh"] = image_url
+
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response({
+            "message": "Cập nhật sản phẩm thành công",
+            "data": serializer.data
+        })
+    
 class HoadonViewSet(viewsets.ModelViewSet):
     queryset = Hoadon.objects.all().order_by('-ngayhd')
     serializer_class = HoadonSerializer
-    # permission_classes = [IsAuthenticatedWithJWT]
+    permission_classes = [IsAuthenticatedWithJWT]
     
     @action(detail=True, methods=['get'])
     def dong_hoa_don(self, request, pk=None):
@@ -151,7 +220,8 @@ class HoadonViewSet(viewsets.ModelViewSet):
 class DonghoadonViewSet(viewsets.ModelViewSet):
     queryset = Donghoadon.objects.all()
     serializer_class = DonghoadonSerializer
-    # permission_classes = [IsAuthenticatedWithJWT]
+    permission_classes = [IsAuthenticatedWithJWT]
+
     def perform_create(self, serializer):
         idhoadon = self.request.data.get('idhoadon')
 

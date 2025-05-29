@@ -1,73 +1,101 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { registerStaff, getChucVu, RegisterStaffData, ChucVu } from '@/services/staffapi';
-import AlertDialog from '@/components/AlertDialog'; // Giả sử đường dẫn tới AlertDialog
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { updateStaff, getChucVu, ChucVu } from '@/services/staffapi';
 import { getUserFromToken } from '@/services/authapi';
 import { checkPermissionAPI } from '@/services/checkpermissionapi';
+import AlertDialog from '@/components/AlertDialog';
 
-const RegisterStaffScreen = () => {
+interface UpdateStaffData {
+  IDNhanVien: string;
+  TenNV: string;
+  SDTNV: string;
+  EmailNV: string;
+  CCCDNV: string;
+  ChucVuNV: string;
+}
+
+const UpdateStaffScreen = () => {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const [loading, setLoading] = useState(false);
   const [chucVuList, setChucVuList] = useState<ChucVu[]>([]);
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertInfo, setAlertInfo] = useState({ title: '', message: '', isSuccess: false });
   const [permissions, setPermissions] = useState({
-    canCreate: false
+    canUpdate: false
   });
 
   // Form state
-  const [formData, setFormData] = useState<RegisterStaffData>({
-    TenNV: "",
-    SDTNV: "",
-    EmailNV: "",
-    CCCDNV: "",
-    ChucVuNV: "2", // Mặc định là nhân viên (2)
-    MatKhau: ""
+  const [formData, setFormData] = useState<UpdateStaffData>({
+    IDNhanVien: '',
+    TenNV: '',
+    SDTNV: '',
+    EmailNV: '',
+    CCCDNV: '',
+    ChucVuNV: '2'
+  });
+
+  const [toast, setToast] = useState<{
+    visible: boolean;
+    message: string;
+    type: 'info' | 'error' | 'success';
+  }>({
+    visible: false,
+    message: '',
+    type: 'info'
   });
 
   useEffect(() => {
     checkUserPermissions();
     fetchChucVu();
-  }, []);
+    if (params.staffData) {
+      const staffData = JSON.parse(params.staffData as string);
+      setFormData(staffData);
+    }
+  }, [params.staffData]);
+
+  const showMessage = (message: string, type: 'info' | 'error' | 'success') => {
+    if (Platform.OS === 'web') {
+      setToast({
+        visible: true,
+        message,
+        type
+      });
+    } else {
+      Alert.alert(
+        type === 'error' ? 'Lỗi' : type === 'success' ? 'Thành công' : 'Thông báo',
+        message,
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   const checkUserPermissions = async () => {
     try {
-      // Get user info from token
       const user = await getUserFromToken();
 
       if (!user) {
-        // No token or invalid token
         setPermissions({
-          canCreate: false
+          canUpdate: false
         });
         return;
       }
 
-      // Check staff create permission
-      const canCreate = await checkPermissionAPI(user.ChucVuNV, 'nhanvien.create');
+      const canUpdate = await checkPermissionAPI(user.ChucVuNV, 'nhanvien.update');
 
       setPermissions({
-        canCreate
+        canUpdate
       });
 
-      // If user doesn't have create permission, redirect to home
-      if (!canCreate) {
-        Alert.alert(
-          "Thông báo",
-          "Bạn không có quyền tạo nhân viên mới.",
-          [
-            { 
-              text: "Đã hiểu",
-              onPress: () => router.push('../HomeScreen')
-            }
-          ]
-        );
+      if (!canUpdate) {
+        showMessage('Bạn không có quyền cập nhật thông tin nhân viên.', 'error');
+        router.push('../HomeScreen');
       }
-    } catch (error) {
-      console.error('Error checking permissions:', error);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Không thể kiểm tra quyền truy cập';
+      showMessage(errorMessage, 'error');
     }
   };
 
@@ -75,20 +103,19 @@ const RegisterStaffScreen = () => {
     try {
       const data = await getChucVu();
       setChucVuList(data);
-    } catch (error) {
-      console.error('Lỗi khi lấy danh sách chức vụ:', error);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Không thể lấy danh sách chức vụ';
+      showMessage(errorMessage, 'error');
     }
   };
 
-  // Xử lý thay đổi input
-  const handleInputChange = (field: keyof RegisterStaffData, value: string) => {
+  const handleInputChange = (field: keyof UpdateStaffData, value: string) => {
     setFormData({
       ...formData,
       [field]: value
     });
   };
 
-  // Đóng thông báo
   const handleCloseAlert = () => {
     setAlertVisible(false);
     if (alertInfo.isSuccess) {
@@ -96,59 +123,40 @@ const RegisterStaffScreen = () => {
     }
   };
 
-  // Xử lý đăng ký nhân viên
-  const handleRegister = async () => {
-    console.log(">>> Button pressed - starting register process");
-    
-    // Kiểm tra các trường bắt buộc
-    if (!formData.TenNV || !formData.SDTNV || !formData.CCCDNV || !formData.MatKhau) {
-      setAlertInfo({ title: 'Lỗi', message: 'Vui lòng điền đầy đủ thông tin bắt buộc', isSuccess: false });
-      setAlertVisible(true);
+  const handleUpdate = async () => {
+    if (!formData.TenNV || !formData.SDTNV || !formData.CCCDNV) {
+      showMessage('Vui lòng điền đầy đủ thông tin bắt buộc', 'error');
       return;
     }
 
-    // Kiểm tra email hợp lệ
     if (formData.EmailNV && !formData.EmailNV.includes('@')) {
-      setAlertInfo({ title: 'Lỗi', message: 'Email không hợp lệ', isSuccess: false });
-      setAlertVisible(true);
-      return;
-    }
-
-    // Kiểm tra mật khẩu khớp nhau
-    if (formData.MatKhau !== confirmPassword) {
-      setAlertInfo({ title: 'Lỗi', message: 'Mật khẩu không khớp', isSuccess: false });
-      setAlertVisible(true);
+      showMessage('Email không hợp lệ', 'error');
       return;
     }
 
     try {
       setLoading(true);
-      console.log(">>> Submitting data:", formData);
+      const response = await updateStaff(formData);
       
-      const response = await registerStaff(formData);
-      console.log(">>> Register response:", response);
-      
-      if (response.success) {
-        setAlertInfo({ title: 'Thành công', message: 'Đăng ký nhân viên mới thành công', isSuccess: true });
+      if (response) {
+        showMessage('Cập nhật thông tin nhân viên thành công', 'success');
+        router.back();
       } else {
-        setAlertInfo({ title: 'Lỗi', message: response.message || 'Đăng ký thất bại', isSuccess: false });
+        showMessage('Cập nhật thất bại', 'error');
       }
-      setAlertVisible(true);
     } catch (error: any) {
-      console.error(">>> Register error:", error);
-      setAlertInfo({ title: 'Lỗi', message: error.message || 'Đã xảy ra lỗi khi đăng ký nhân viên', isSuccess: false });
-      setAlertVisible(true);
+      const errorMessage = error.response?.data?.error || error.error || error.message || 'Không thể thêm voucher. Vui lòng thử lại!';
+      showMessage(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  // If user doesn't have create permission, show error
-  if (!permissions.canCreate && !loading) {
+  if (!permissions.canUpdate && !loading) {
     return (
       <View style={styles.container}>
         <View style={styles.centeredContent}>
-          <Text style={styles.errorText}>Bạn không có quyền tạo nhân viên mới.</Text>
+          <Text style={styles.errorText}>Bạn không có quyền cập nhật thông tin nhân viên.</Text>
           <TouchableOpacity
             style={styles.backToHomeButton}
             onPress={() => router.push('../HomeScreen')}
@@ -162,18 +170,15 @@ const RegisterStaffScreen = () => {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Đăng ký nhân viên mới</Text>
+        <Text style={styles.headerTitle}>Cập nhật thông tin nhân viên</Text>
         <View style={{ width: 24 }} />
       </View>
 
-      {/* Form */}
       <View style={styles.form}>
-        {/* Họ và tên */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Họ và tên *</Text>
           <TextInput
@@ -184,7 +189,6 @@ const RegisterStaffScreen = () => {
           />
         </View>
 
-        {/* Số điện thoại */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Số điện thoại *</Text>
           <TextInput
@@ -196,7 +200,6 @@ const RegisterStaffScreen = () => {
           />
         </View>
 
-        {/* Email */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Email</Text>
           <TextInput
@@ -208,7 +211,6 @@ const RegisterStaffScreen = () => {
           />
         </View>
 
-        {/* CCCD */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Căn cước công dân *</Text>
           <TextInput
@@ -220,7 +222,6 @@ const RegisterStaffScreen = () => {
           />
         </View>
 
-        {/* Chức vụ */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Chức vụ *</Text>
           {chucVuList.map((chucVu) => (
@@ -238,54 +239,28 @@ const RegisterStaffScreen = () => {
           ))}
         </View>
 
-        {/* Mật khẩu */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Mật khẩu *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.MatKhau}
-            onChangeText={(text) => handleInputChange('MatKhau', text)}
-            placeholder="Nhập mật khẩu"
-            secureTextEntry
-          />
-        </View>
-
-        {/* Xác nhận mật khẩu */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Xác nhận mật khẩu *</Text>
-          <TextInput
-            style={styles.input}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder="Nhập lại mật khẩu"
-            secureTextEntry
-          />
-        </View>
-
-        {/* Nút đăng ký */}
         <TouchableOpacity 
-          style={[styles.registerButton, loading && styles.disabledButton]} 
-          onPress={handleRegister}
+          style={[styles.updateButton, loading && styles.disabledButton]} 
+          onPress={handleUpdate}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.registerButtonText}>Đăng ký nhân viên</Text>
+            <Text style={styles.updateButtonText}>Cập nhật thông tin</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Alert Dialog */}
       <AlertDialog
         visible={alertVisible}
         title={alertInfo.title}
         message={alertInfo.message}
         confirmText="OK"
-        cancelText={alertInfo.isSuccess ? "" : "Hủy"} // Chỉ hiện nút Hủy khi không thành công
+        cancelText={alertInfo.isSuccess ? "" : "Hủy"}
         onConfirm={handleCloseAlert}
         onCancel={() => setAlertVisible(false)}
-        isSuccess={alertInfo.isSuccess} // Truyền trạng thái thành công/thất bại
+        isSuccess={alertInfo.isSuccess}
       />
     </ScrollView>
   );
@@ -347,15 +322,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   radioButtonSelected: {
-    backgroundColor: '#FF8F8F',
-    borderColor: '#FF8F8F',
+    backgroundColor: '#e4434a',
+    borderColor: '#e4434a',
   },
   radioText: {
     fontSize: 16,
     color: '#333',
   },
-  registerButton: {
-    backgroundColor: '#FF8F8F',
+  updateButton: {
+    backgroundColor: '#e4434a',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -364,7 +339,7 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.6,
   },
-  registerButtonText: {
+  updateButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
@@ -392,4 +367,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default RegisterStaffScreen;
+export default UpdateStaffScreen; 

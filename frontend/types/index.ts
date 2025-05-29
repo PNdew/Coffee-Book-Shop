@@ -14,6 +14,8 @@ export interface SanphamAPI {
   giasp: number;
   trangthaisp: number;
   loaisp: string;
+  hinhanh: string | null;
+  imageUrl?: string; // Keep for backward compatibility
 }
 
 export interface Voucher {
@@ -101,8 +103,8 @@ export interface BookInput {
   ten_sach: string;
   tac_gia: string;
   so_luong_sach: number;
-  trang_thai?: string;
-  the_loai_ids?: number[];
+  trang_thai: string;
+  the_loai_ids: number[];
 }
 
 export interface UserInfo {

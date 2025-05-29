@@ -6,17 +6,24 @@ from .models.user import NhanVien, TaiKhoan
 from .models.permission import NhomQuyen, Quyen
 
 class SanphamSerializer(serializers.ModelSerializer):
+    imageUrl = serializers.SerializerMethodField()
+
     class Meta:
         model = Sanpham
-        fields = ['idsanpham', 'tensp', 'giasp', 'trangthaisp', 'loaisp']
+        fields = ['idsanpham', 'tensp', 'giasp', 'trangthaisp', 'loaisp', 'hinhanh', 'imageUrl']
         # read_only_fields = ['idsanpham']
 
+    def get_imageUrl(self, obj):
+        if obj.hinhanh:
+            return obj.hinhanh.url
+        return None 
+    
     def validate_giasp(self, value):
         # Chuyển đổi số nguyên thành Decimal nếu cần
         if isinstance(value, int):
             return float(value)
         return value
-
+    
 class VoucherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Voucher

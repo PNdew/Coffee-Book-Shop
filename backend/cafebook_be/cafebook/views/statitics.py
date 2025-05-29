@@ -7,8 +7,11 @@ import calendar
 
 from cafebook.models import Hoadon, Donghoadon
 from cafebook.serializers import StatisticsSerializer
+from ..permissions import IsAuthenticatedWithJWT
 
 class StatisticsView(APIView):
+    permission_classes = [IsAuthenticatedWithJWT]
+    
     def get(self, request):
         loai_thong_ke = request.query_params.get('type', 'day')
         ngay_str = request.query_params.get('date', datetime.now().strftime('%Y-%m-%d'))
