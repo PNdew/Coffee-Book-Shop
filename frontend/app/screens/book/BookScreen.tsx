@@ -139,7 +139,7 @@ export default function SachScreen() {
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Tìm kiếm sách theo tên, tác giả"
+            placeholder="Tìm kiếm sách theo tên sách, tác giả"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
