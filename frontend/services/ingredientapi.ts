@@ -24,7 +24,7 @@ interface ApiResponse {
 // Interface cho đầu vào khi tạo nguyên liệu mới
 export interface IngredientInput {
   ten_nguyen_lieu: string;
-  so_luong: number;
+  so_luong: string;
   don_vi: string;
   gia_nhap: number;
 }

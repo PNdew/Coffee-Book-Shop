@@ -17,7 +17,7 @@ const LoginScreen = () => {
       const user = await login(SDTNV, MatKhau);
       
       if (user) {
-        Alert.alert("Đăng nhập thành công");
+        Alert.alert("Đăng nhập thành công", "Chào mừng " + user.TenNV);
         // Điều hướng đến trang Home
         router.push("./screens/HomeScreen");
       } else {
