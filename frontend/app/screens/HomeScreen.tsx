@@ -62,7 +62,7 @@ const HomeScreen = () => {
   }[] = [
     { title: 'Tạo Order', icon: 'list-alt', screen: 'CreateOrderScreen', onPress: () => router.push('./createorder/CreateOrderScreen') },
     { title: 'Quản lý nguyên liệu', icon: 'coffee', screen: 'IngredientScreen', onPress: () => router.push('./ingredient/IngredientScreen') },
-    { title: 'Quản lý hóa đơn', icon: 'file-text-o', screen: 'BillScreen', onPress: () => router.push('./bill/hoadon') },
+    { title: 'Quản lý hóa đơn', icon: 'file-text-o', screen: 'OrderScreen', onPress: () => router.push('./OrderScreen') },
     { title: 'Quản lý menu', icon: 'cutlery', screen: 'MenuScreen', onPress: () => router.push('./MenuScreen') },
     { title: 'Quản lý sách', icon: 'book', screen: 'BookScreen', onPress: () => router.push('./book/BookScreen') },
     { title: 'Quản lý chấm công', icon: 'bar-chart', screen: 'AttendanceScreen', onPress: () => router.push('./AttendanceScreen') }
@@ -76,7 +76,7 @@ const HomeScreen = () => {
     onPress: () => void 
   }[] = [
     { title: 'Quản lý nhân viên', icon: 'users', screen: 'StaffScreen', onPress: () => router.push('./staff/StaffScreen') },
-    { title: 'Quản lý thống kê', icon: 'line-chart', screen: 'StatisticsScreen', onPress: () => router.push('./statistics/StatisticsScreen') },
+    { title: 'Quản lý thống kê', icon: 'line-chart', screen: 'StatisticsScreen', onPress: () => router.push('./StatisticsScreen') },
     { title: 'Quản lý voucher', icon: 'ticket', screen: 'VoucherScreen', onPress: () => router.push('./voucher/VoucherScreen') }
   ];
 

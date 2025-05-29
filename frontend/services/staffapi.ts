@@ -111,3 +111,45 @@ export const registerStaff = async (staffData: RegisterStaffData): Promise<any> 
     throw error;
   }
 };
+
+export const updateStaff = async (staffData: {
+  IDNhanVien: string;
+  TenNV: string;
+  SDTNV: string;
+  EmailNV: string;
+  CCCDNV: string;
+  ChucVuNV: string;
+}) => {
+  try {
+    const token = await getAuthToken();
+    const response = await axios.put(
+      `${API_URL}/nhanvien/${staffData.IDNhanVien}/`,
+      staffData,
+      {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Lỗi khi cập nhật thông tin nhân viên');
+  }
+};
+
+export const deleteStaff = async (staffId: string) => {
+  try {
+    const token = await getAuthToken();
+    const response = await axios.delete(
+      `${API_URL}/nhanvien/${staffId}`,
+      {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+        },
+      }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || 'Lỗi khi xóa nhân viên');
+  }
+};

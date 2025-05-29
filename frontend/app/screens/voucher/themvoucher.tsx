@@ -1,4 +1,4 @@
-import { StyleSheet, TextInput, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Text, View } from '@/components/Themed';
 import { Link, useRouter } from 'expo-router';
@@ -44,14 +44,26 @@ export default function ThemVoucherScreen() {
     return date.toISOString().split('T')[0];
   };
 
+  const showMessage = (message: string, type: 'info' | 'error' | 'success') => {
+    if (Platform.OS === 'web') {
+      setToast({
+        visible: true,
+        message,
+        type
+      });
+    } else {
+      Alert.alert(
+        type === 'error' ? 'Lỗi' : type === 'success' ? 'Thành công' : 'Thông báo',
+        message,
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   const handleAddVoucher = async () => {
     // Validation
     if (!tenVoucher.trim() || !giamGia.trim() || !ngayBatDau.trim() || !ngayKetThuc.trim()) {
-      setToast({
-        visible: true,
-        message: 'Vui lòng điền đầy đủ thông tin!',
-        type: 'error'
-      });
+      showMessage('Vui lòng điền đầy đủ thông tin!', 'error');
       return;
     }
 
@@ -65,11 +77,7 @@ export default function ThemVoucherScreen() {
         thoigianketthucvoucher: ngayKetThuc
       });
       
-      setToast({
-        visible: true,
-        message: 'Thêm voucher thành công!',
-        type: 'success'
-      });
+      showMessage('Thêm voucher thành công!', 'success');
       
       // Clear fields
       setTenVoucher('');
@@ -84,12 +92,10 @@ export default function ThemVoucherScreen() {
           params: { refresh: new Date().getTime() }
         });
       }, 1500);
-    } catch (error) {
-      setToast({
-        visible: true,
-        message: 'Không thể thêm voucher. Vui lòng thử lại!',
-        type: 'error'
-      });
+    } catch (error: any) {
+      // Handle backend error response
+      const errorMessage = error.response?.data?.error || error.error || error.message || 'Không thể thêm voucher. Vui lòng thử lại!';
+      showMessage(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

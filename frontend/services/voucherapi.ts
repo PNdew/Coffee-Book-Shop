@@ -33,8 +33,13 @@ export const voucherService = {
   
   getVoucher: async (id: string) => {
     try {
-      const response = await axios.get(`${API_URL}/voucher/${id}/`);
-      return response.data;
+      const token = await getAuthToken();
+      const response = await axios.get(`${API_URL}/voucher/${id}/`, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+        }
+      });
+      return response.data
     } catch (error) {
       console.error(`Lỗi khi lấy thông tin voucher ${id}:`, error);
       throw error;
@@ -43,7 +48,12 @@ export const voucherService = {
   
   addVoucher: async (voucherData: VoucherInput) => {
     try {
-      const response = await axios.post(`${API_URL}/voucher/`, voucherData);
+      const token = await getAuthToken();
+      const response = await axios.post(`${API_URL}/voucher/`, voucherData, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+        }
+      });
       return response.data;
     } catch (error) {
       console.error('Lỗi khi thêm voucher:', error);
@@ -53,8 +63,12 @@ export const voucherService = {
   
   updateVoucher: async (id: string, voucherData: Partial<VoucherInput>) => {
     try {
-      console.log(voucherData);
-      const response = await axios.put(`${API_URL}/voucher/${id}/`, voucherData);
+      const token = await getAuthToken();
+      const response = await axios.put(`${API_URL}/voucher/${id}/`, voucherData, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+        }
+      });
       return response.data;
     } catch (error) {
       if (error instanceof AxiosError) {
@@ -68,7 +82,12 @@ export const voucherService = {
   
   deleteVoucher: async (id: string) => {
     try {
-      await axios.delete(`${API_URL}/voucher/${id}/`);
+      const token = getAuthToken();
+      await axios.delete(`${API_URL}/voucher/${id}/`, {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+        }
+      });
     } catch (error) {
       console.error(`Lỗi khi xóa voucher ${id}:`, error);
       throw error;

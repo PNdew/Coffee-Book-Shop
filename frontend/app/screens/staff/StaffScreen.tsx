@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Ionicons, FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { getNhanVien, NhanVien } from '../../../services/staffapi';
-import { getUserFromToken } from '../../../services/authapi';
+import { getNhanVien, NhanVien, updateStaff, deleteStaff } from '@/services/staffapi';
+import { getUserFromToken } from '@/services/authapi';
+import { checkPermissionAPI } from '@/services/checkpermissionapi';
+import AlertDialog from '@/components/AlertDialog';
 
 export default function StaffScreen() {
   const router = useRouter();
@@ -12,17 +14,84 @@ export default function StaffScreen() {
   const [staff, setStaff] = useState<NhanVien[]>([]);
   const [filteredStaff, setFilteredStaff] = useState<NhanVien[]>([]);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [permissions, setPermissions] = useState({
+    canView: false,
+    canCreate: false,
+    canUpdate: false,
+    canDelete: false
+  });
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState<NhanVien | null>(null);
+  const [toast, setToast] = useState<{
+    visible: boolean;
+    message: string;
+    type: 'info' | 'error' | 'success';
+  }>({
+    visible: false,
+    message: '',
+    type: 'info'
+  });
 
   useEffect(() => {
-    checkAuth();
+    checkUserPermissions();
     fetchStaff();
   }, []);
 
-  const checkAuth = async () => {
-    const user = await getUserFromToken();
-    if (!user || user.ChucVuNV !== 1) {
-      Alert.alert('Không có quyền', 'Bạn không có quyền truy cập chức năng này');
-      router.back();
+  const showMessage = (message: string, type: 'info' | 'error' | 'success') => {
+    if (Platform.OS === 'web') {
+      setToast({
+        visible: true,
+        message,
+        type
+      });
+    } else {
+      Alert.alert(
+        type === 'error' ? 'Lỗi' : type === 'success' ? 'Thành công' : 'Thông báo',
+        message,
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const checkUserPermissions = async () => {
+    try {
+      const user = await getUserFromToken();
+
+      if (!user) {
+        setPermissions({
+          canView: false,
+          canCreate: false,
+          canUpdate: false,
+          canDelete: false
+        });
+        return;
+      }
+
+      const canView = await checkPermissionAPI(user.ChucVuNV, 'nhanvien.view');
+      let canCreate = false;
+      let canUpdate = false;
+      let canDelete = false;
+
+      if (canView) {
+        canCreate = await checkPermissionAPI(user.ChucVuNV, 'nhanvien.create');
+        canUpdate = await checkPermissionAPI(user.ChucVuNV, 'nhanvien.update');
+        canDelete = await checkPermissionAPI(user.ChucVuNV, 'nhanvien.delete');
+      }
+
+      setPermissions({
+        canView,
+        canCreate,
+        canUpdate,
+        canDelete
+      });
+
+      if (!canView) {
+        showMessage('Bạn không có quyền xem trang này.', 'error');
+        router.push('../HomeScreen');
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Không thể kiểm tra quyền truy cập';
+      showMessage(errorMessage, 'error');
     }
   };
 
@@ -32,9 +101,9 @@ export default function StaffScreen() {
       const staffData = await getNhanVien();
       setStaff(staffData);
       setFilteredStaff(staffData);
-    } catch (error) {
-      console.error('Lỗi khi lấy danh sách nhân viên:', error);
-      Alert.alert('Lỗi', 'Không thể lấy danh sách nhân viên');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Không thể lấy danh sách nhân viên';
+      showMessage(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -69,6 +138,45 @@ export default function StaffScreen() {
     }
   };
 
+  const handleUpdateStaff = (staff: NhanVien) => {
+    if (!permissions.canUpdate) {
+      showMessage('Bạn không có quyền cập nhật thông tin nhân viên.', 'error');
+      return;
+    }
+    router.push({
+      pathname: '/screens/staff/UpdateStaffScreen',
+      params: { staffData: JSON.stringify(staff) }
+    });
+  };
+
+  const handleDeleteStaff = (staff: NhanVien) => {
+    if (!permissions.canDelete) {
+      showMessage('Bạn không có quyền xóa nhân viên.', 'error');
+      return;
+    }
+    setSelectedStaff(staff);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedStaff) return;
+
+    try {
+      setLoading(true);
+      await deleteStaff(selectedStaff.IDNhanVien.toString());
+      setStaff(staff.filter(item => item.IDNhanVien !== selectedStaff.IDNhanVien));
+      setFilteredStaff(filteredStaff.filter(item => item.IDNhanVien !== selectedStaff.IDNhanVien));
+      showMessage('Đã xóa nhân viên thành công', 'success');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Không thể xóa nhân viên';
+      showMessage(errorMessage, 'error');
+    } finally {
+      setLoading(false);
+      setShowDeleteDialog(false);
+      setSelectedStaff(null);
+    }
+  };
+
   const renderCategoryButton = (title: string, filter: string) => (
     <TouchableOpacity
       style={[styles.categoryButton, activeFilter === filter && styles.activeButton]}
@@ -93,9 +201,44 @@ export default function StaffScreen() {
           <Text style={styles.staffDetail}>SĐT: {item.SDTNV}</Text>
           <Text style={styles.staffDetail}>Công việc: {chucVu}</Text>
         </View>
+        <View style={styles.staffActions}>
+          {permissions.canUpdate && (
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => handleUpdateStaff(item)}
+            >
+              <Ionicons name="pencil" size={24} color="#e4434a" />
+            </TouchableOpacity>
+          )}
+          {permissions.canDelete && (
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => handleDeleteStaff(item)}
+            >
+              <Ionicons name="trash" size={24} color="#e4434a" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     );
   };
+
+  // If user doesn't have view permission, show error
+  if (!permissions.canView && !loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.centeredContent}>
+          <Text style={styles.errorText}>Bạn không có quyền xem trang này.</Text>
+          <TouchableOpacity
+            style={styles.backToHomeButton}
+            onPress={() => router.push('../HomeScreen')}
+          >
+            <Text style={styles.backToHomeText}>Quay về trang chủ</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -124,7 +267,7 @@ export default function StaffScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#FF8F8F" style={styles.loader} />
+        <ActivityIndicator size="large" color="#e4434a" style={styles.loader} />
       ) : (
         <FlatList
           data={filteredStaff}
@@ -144,12 +287,27 @@ export default function StaffScreen() {
         </TouchableOpacity>
       </View>
       
-      <TouchableOpacity 
-        style={styles.addButton}
-        onPress={() => router.push('/screens/staff/RegisterStaffScreen')}
-      >
-        <MaterialIcons name="person-add" size={24} color="#fff" />
-      </TouchableOpacity>
+      {permissions.canCreate && (
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => router.push('/screens/staff/RegisterStaffScreen')}
+        >
+          <MaterialIcons name="person-add" size={24} color="#fff" />
+        </TouchableOpacity>
+      )}
+
+      <AlertDialog
+        visible={showDeleteDialog}
+        title="Xác nhận xóa"
+        message={`Bạn có chắc chắn muốn xóa nhân viên ${selectedStaff?.TenNV}?`}
+        confirmText="Xóa"
+        cancelText="Hủy"
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setShowDeleteDialog(false);
+          setSelectedStaff(null);
+        }}
+      />
     </View>
   );
 }
@@ -192,7 +350,7 @@ const styles = StyleSheet.create({
   categoryContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: 20,
     marginBottom: 15,
   },
   categoryButton: {
@@ -203,7 +361,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   activeButton: {
-    backgroundColor: '#FF8F8F',
+    backgroundColor: '#e4434a',
   },
   categoryButtonText: {
     color: '#000',
@@ -249,7 +407,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   reportButton: {
-    backgroundColor: '#FF8F8F',
+    backgroundColor: '#e4434a',
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -259,7 +417,7 @@ const styles = StyleSheet.create({
     marginRight: 5,
   },
   attendanceButton: {
-    backgroundColor: '#FF8F8F',
+    backgroundColor: '#e4434a',
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -272,7 +430,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     bottom: 70,
-    backgroundColor: '#FF8F8F',
+    backgroundColor: '#e4434a',
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -285,8 +443,37 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
   buttonText: {
-    color: '#000',
+    color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  centeredContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#d32f2f',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  backToHomeButton: {
+    backgroundColor: '#E4434A',
+    padding: 10,
+    borderRadius: 5,
+  },
+  backToHomeText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  staffActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  actionButton: {
+    padding: 8,
   },
 });

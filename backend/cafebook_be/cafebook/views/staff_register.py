@@ -1,10 +1,12 @@
 from django.http import JsonResponse
+from rest_framework.response import Response
+from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from django.db import connection, transaction
 from django.contrib.auth.hashers import make_password
 import json
 import traceback
-
+import re  # Thêm thư viện regex ở đầu file
 from ..auth.get_user_token import get_user_from_token
 from ..permissions import IsAuthenticatedWithJWT
 from rest_framework.decorators import api_view, permission_classes
@@ -55,6 +57,12 @@ def register_staff(request):
         cccd_nv = data.get('CCCDNV')
         chuc_vu = data.get('ChucVuNV', '2')  # Mặc định là nhân viên
         mat_khau = data.get('MatKhau')
+
+        if not re.match(r'^[\w\s\.,\-àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđĐ]+$', ten_nv, re.UNICODE):
+            return Response(
+                {"error": "Tên nhân viên chứa ký tự không hợp lệ"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         # Kiểm tra dữ liệu
         if not ten_nv or not sdt_nv or not cccd_nv or not mat_khau:

@@ -1,4 +1,5 @@
 import jwt
+import os
 from django.conf import settings
 from django.db import connection
 
@@ -16,11 +17,12 @@ def get_user_from_token(request):
             
         token = auth_header.split(' ')[1]
         
-        # Giải mã token với SECRET_KEY từ settings
         try:
-            # Sử dụng JWT_ALGORITHM từ settings, mặc định là HS256
-            algorithm = getattr(settings, 'JWT_ALGORITHM', 'HS256')
-            decoded = jwt.decode(token, settings.SECRET_KEY, algorithms=[algorithm])
+            # Sử dụng đúng JWT_SECRET và JWT_ALGORITHM
+            secret = os.getenv('JWT_SECRET', settings.SECRET_KEY)
+            algorithm = os.getenv('JWT_ALGORITHM', getattr(settings, 'JWT_ALGORITHM', 'HS256'))
+
+            decoded = jwt.decode(token, secret, algorithms=[algorithm])
             
             # Lấy thông tin user từ database
             sdtnv = decoded.get('SDTNV')
@@ -40,6 +42,7 @@ def get_user_from_token(request):
                 
                 user_info = {
                     'SDTNV': user_data[0],
+                    'IDNhanVien': decoded.get('IDNhanVien'),  # từ token
                     'TenNV': user_data[1], 
                     'ChucVuNV': user_data[2]
                 }

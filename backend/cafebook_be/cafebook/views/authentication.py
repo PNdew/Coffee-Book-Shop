@@ -6,7 +6,6 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status
 from django.contrib.auth.hashers import check_password
-from datetime import datetime, timedelta
 from ..auth.jwt_handler import JWTHandler
 
 # Hàm convert từ cursor -> dict
@@ -76,12 +75,6 @@ def login_view(request):
                 'phone': nhan_vien['SDTNV'],
                 'email': nhan_vien.get('EmailNV', ''),
                 'role': "Quản lý" if is_admin else "Nhân viên",
-                'permissions': {
-                    'canView': True,  # Ai cũng có quyền xem
-                    'canAdd': is_admin,
-                    'canEdit': is_admin,
-                    'canDelete': is_admin,
-                }
             },
             "message": f"Đăng nhập thành công, chào {nhan_vien['TenNV']}",
             "access": token,

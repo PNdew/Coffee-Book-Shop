@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Text, View } from '@/components/Themed';
-import { StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Pressable, Platform } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Pressable, Platform, Alert } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { voucherService } from '@/services/voucherapi';
@@ -143,18 +143,32 @@ export default function SuaVoucherScreen() {
     return null;
   };
 
+  const showMessage = (message: string, type: 'info' | 'error' | 'success') => {
+    if (Platform.OS === 'web') {
+      setError(type === 'error' ? message : null);
+      setSuccess(type === 'success');
+    } else {
+      Alert.alert(
+        type === 'error' ? 'Lỗi' : type === 'success' ? 'Thành công' : 'Thông báo',
+        message,
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   // Xử lý sự kiện cập nhật voucher
   const handleUpdateVoucher = async () => {
     // Kiểm tra dữ liệu
     const validationError = validateForm();
     if (validationError) {
-      setError(validationError);
+      showMessage(validationError, 'error');
       return;
     }
 
     try {
       setSaving(true);
       setError(null);
+      setSuccess(false);
 
       const voucherData = {
         tenvoucher: tenVoucher,
@@ -165,7 +179,7 @@ export default function SuaVoucherScreen() {
       };
 
       await voucherService.updateVoucher(voucherId, voucherData);
-      setSuccess(true);
+      showMessage('Cập nhật voucher thành công!', 'success');
       
       // Điều hướng về trang danh sách sau 1.5 giây
       setTimeout(() => {
@@ -174,9 +188,10 @@ export default function SuaVoucherScreen() {
           params: { refresh: Date.now().toString() }
         });
       }, 1500);
-    } catch (err) {
-      console.error('Lỗi khi cập nhật voucher:', err);
-      setError('Không thể cập nhật voucher. Vui lòng thử lại!');
+    } catch (error: any) {
+      // Handle backend error response
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Không thể cập nhật voucher. Vui lòng thử lại!';
+      showMessage(errorMessage, 'error');
     } finally {
       setSaving(false);
     }
@@ -186,15 +201,17 @@ export default function SuaVoucherScreen() {
   const handleDeleteVoucher = async () => {
     try {
       await voucherService.deleteVoucher(voucherId);
+      showMessage('Xóa voucher thành công!', 'success');
       
       // Điều hướng về trang danh sách sau khi xóa
       router.push({
         pathname: './VoucherScreen',
         params: { refresh: Date.now().toString() }
       });
-    } catch (err) {
-      console.error('Lỗi khi xóa voucher:', err);
-      setError('Không thể xóa voucher. Vui lòng thử lại!');
+    } catch (error: any) {
+      // Handle backend error response
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Không thể xóa voucher. Vui lòng thử lại!';
+      showMessage(errorMessage, 'error');
       setShowDeleteDialog(false);
     }
   };

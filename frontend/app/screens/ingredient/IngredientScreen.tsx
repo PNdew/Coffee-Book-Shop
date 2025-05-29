@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TextInput, FlatList, TouchableOpacity, Pressable, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { StyleSheet, TextInput, FlatList, TouchableOpacity, Pressable, ActivityIndicator, Alert, ScrollView, Platform } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Text, View } from '@/components/Themed';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
@@ -8,6 +8,8 @@ import { ingredientService, Ingredient } from '@/services/ingredientapi';
 import { getUserFromToken, getPermissionsByRole } from '@/services/authapi';
 import type { Permissions } from '@/services/authapi';
 import AlertDialog from '@/components/AlertDialog';
+import { checkPermissionAPI } from '@/services/checkpermissionapi';
+import ToastMessage from '@/components/ToastMessage';
 
 export default function NguyenLieuScreen() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -22,26 +24,78 @@ export default function NguyenLieuScreen() {
     canEdit: false,
     canDelete: false
   });
+  const [toast, setToast] = useState({
+    visible: false,
+    message: '',
+    type: 'info' as 'info' | 'error' | 'success'
+  });
 
   const router = useRouter();
   const { refresh } = useLocalSearchParams();
 
-  useEffect(() => {
-    // Lấy thông tin quyền hạn
-    const getPermissions = async () => {
-      try {
-        const user = await getUserFromToken();
-        if (user) {
-          setPermissions(getPermissionsByRole(user.ChucVuNV));
-        }
-      } catch (error) {
-        console.error('Lỗi khi lấy quyền hạn:', error);
-      }
-    };
+  const showMessage = (message: string, type: 'info' | 'error' | 'success') => {
+    if (Platform.OS === 'web') {
+      setToast({
+        visible: true,
+        message,
+        type
+      });
+    } else {
+      Alert.alert(
+        type === 'error' ? 'Lỗi' : type === 'success' ? 'Thành công' : 'Thông báo',
+        message,
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
-    getPermissions();
+  useEffect(() => {
+    // Check user permissions when component mounts
+    checkUserPermissions();
     fetchIngredients();
   }, [refresh]);
+
+  const checkUserPermissions = async () => {
+    try {
+      // Get user info from token
+      const user = await getUserFromToken();
+
+      if (!user) {
+        // No token or invalid token
+        setPermissions({
+          canView: false,
+          canAdd: false,
+          canEdit: false,
+          canDelete: false
+        });
+        return;
+      }
+
+      // Check book view permission
+      const canView = await checkPermissionAPI(user.ChucVuNV, 'nguyenlieu.view');
+
+      // Check add/edit/delete permissions if can view
+      let canAdd = false;
+      let canEdit = false;
+      let canDelete = false;
+
+      if (canView) {
+        canAdd = await checkPermissionAPI(user.ChucVuNV, 'nguyenlieu.create');
+        canEdit = await checkPermissionAPI(user.ChucVuNV, 'nguyenlieu.update');
+        canDelete = await checkPermissionAPI(user.ChucVuNV, 'nguyenlieu.delete');
+      }
+
+      setPermissions({
+        canView,
+        canAdd,
+        canEdit,
+        canDelete
+      });
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Không thể kiểm tra quyền truy cập';
+      showMessage(errorMessage, 'error');
+    }
+  };
 
   const fetchIngredients = async () => {
     try {
@@ -55,9 +109,10 @@ export default function NguyenLieuScreen() {
       // Cập nhật state với dữ liệu từ API
       setIngredients(data || []);
       setError(null);
-    } catch (err) {
-      console.error('Chi tiết lỗi:', err);
-      setError(`Không thể tải danh sách nguyên liệu: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Không thể tải danh sách nguyên liệu';
+      setError(errorMessage);
+      showMessage(errorMessage, 'error');
       setIngredients([]);
     } finally {
       setLoading(false);
@@ -74,11 +129,7 @@ export default function NguyenLieuScreen() {
       router.push(`./suanguyenlieu?id=${id}`);
     } else {
       // Nếu chỉ có quyền xem, hiển thị thông báo
-      Alert.alert(
-        "Thông báo",
-        "Bạn chỉ có quyền xem thông tin nguyên liệu, không thể chỉnh sửa.",
-        [{ text: "Đã hiểu" }]
-      );
+      showMessage('Bạn chỉ có quyền xem thông tin nguyên liệu, không thể chỉnh sửa.', 'info');
     }
   };
 
@@ -98,9 +149,10 @@ export default function NguyenLieuScreen() {
       setIngredients(ingredients.filter(ingredient => ingredient.id.toString() !== selectedIngredientId));
       setShowDeleteDialog(false);
       setSelectedIngredientId(null);
-    } catch (error) {
-      console.error('Lỗi khi xóa nguyên liệu:', error);
-      Alert.alert("Lỗi", "Không thể xóa nguyên liệu, vui lòng thử lại sau");
+      showMessage('Xóa nguyên liệu thành công!', 'success');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Không thể xóa nguyên liệu';
+      showMessage(errorMessage, 'error');
     }
   };
 
@@ -220,6 +272,13 @@ export default function NguyenLieuScreen() {
         cancelText="Hủy"
         onConfirm={handleDeleteConfirm}
         onCancel={() => setShowDeleteDialog(false)}
+      />
+
+      <ToastMessage
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast({ ...toast, visible: false })}
       />
     </View>
   );

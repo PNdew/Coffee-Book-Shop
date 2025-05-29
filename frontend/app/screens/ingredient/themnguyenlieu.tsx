@@ -1,10 +1,11 @@
-import { StyleSheet, TextInput, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Text, View } from '@/components/Themed';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ingredientService } from '@/services/ingredientapi';
 import ToastMessage from '@/components/ToastMessage';
+import { Platform } from 'react-native';
 
 export default function AddIngredientScreen() {
   const [tenNguyenLieu, setTenNguyenLieu] = useState('');
@@ -19,14 +20,26 @@ export default function AddIngredientScreen() {
   }>({ visible: false, message: '', type: 'info' });
   const router = useRouter();
 
-  const handleAddIngredient = async () => {
-    // Validation
-    if (!tenNguyenLieu.trim() || !soLuong.trim() || !giaNhap.trim()) {
+  const showMessage = (message: string, type: 'info' | 'error' | 'success') => {
+    if (Platform.OS === 'web') {
       setToast({
         visible: true,
-        message: 'Vui lòng điền đầy đủ thông tin!',
-        type: 'error'
+        message,
+        type
       });
+    } else {
+      Alert.alert(
+        type === 'error' ? 'Lỗi' : type === 'success' ? 'Thành công' : 'Thông báo',
+        message,
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const handleAddIngredient = async () => {
+    // Validation
+    if (!tenNguyenLieu.trim() || !soLuong.trim() || !giaNhap.trim() || !donVi.trim()) {
+      showMessage('Vui lòng điền đầy đủ thông tin!', 'error');
       return;
     }
 
@@ -34,21 +47,18 @@ export default function AddIngredientScreen() {
       setLoading(true);
       await ingredientService.addIngredient({
         ten_nguyen_lieu: tenNguyenLieu,
-        so_luong: parseInt(soLuong),
+        so_luong: soLuong,
         don_vi: donVi,
         gia_nhap: parseInt(giaNhap),
       });
       
-      setToast({
-        visible: true,
-        message: 'Thêm nguyên liệu thành công!',
-        type: 'success'
-      });
+      showMessage('Thêm nguyên liệu thành công!', 'success');
       
       // Clear fields
       setTenNguyenLieu('');
       setSoLuong('');
       setGiaNhap('');
+      setDonVi('');
       
       // Navigate back to list with refresh parameter
       setTimeout(() => {
@@ -57,12 +67,10 @@ export default function AddIngredientScreen() {
           params: { refresh: new Date().getTime() }
         });
       }, 1500);
-    } catch (error) {
-      setToast({
-        visible: true,
-        message: 'Không thể thêm nguyên liệu. Vui lòng thử lại!',
-        type: 'error'
-      });
+    } catch (error: any) {
+      // Handle backend error response
+      const errorMessage = error.response?.data?.error || error.error || error.message || 'Không thể thêm voucher. Vui lòng thử lại!';
+      showMessage(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
