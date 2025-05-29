@@ -198,3 +198,33 @@ export const changePassword = async (passwordData: ChangePasswordData): Promise<
     throw error;
   }
 };
+
+export const forgotPassword = async (email: string, phoneNumber: string) => {
+  try {
+    const response = await axios.post(`${API_URL}/forgot-password/`, { email, phoneNumber });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || 'Lỗi khi gửi mã OTP');
+  }
+};
+
+export const verifyOTP = async (email: string, phoneNumber: string, otp: string) => {
+  try {
+    const response = await axios.post(`${API_URL}/verify-otp/`, { email, phoneNumber, otp });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || 'Lỗi khi xác thực OTP');
+  }
+};
+
+export const resetPassword = async (phoneNumber: string, newPassword: string) => {
+  try {
+    const response = await axios.post(`${API_URL}/reset-password/`, { 
+      phoneNumber, 
+      newPassword 
+    });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.error || 'Lỗi khi đặt lại mật khẩu');
+  }
+};

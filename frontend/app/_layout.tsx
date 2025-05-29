@@ -17,21 +17,23 @@ export default function RootLayout() {
         token = await SecureStore.getItemAsync('access_token');
       }
 
-      // Nếu không có token và đang cố truy cập trang khác trang đăng nhập
-      if (!token && pathname !== '/') {
+      // Các trang không yêu cầu đăng nhập
+      const publicRoutes = [
+        '/',  // Trang đăng nhập
+        '/screens/auth/ForgotPasswordScreen',
+        '/screens/auth/VerifyOTPScreen',
+        '/screens/auth/ChangePasswordScreen',
+        '/screens/auth/ResetPasswordScreen'
+      ];
+
+      const isPublicRoute = publicRoutes.includes(pathname);
+
+      if (!token && !isPublicRoute) {
         router.replace('/');
         return;
       }
 
-      // Nếu không có token và đang ở trang đăng nhập, cho phép truy cập
-      if (!token && pathname === '/') {
-        return;
-      }
-
-      // Nếu có token và đang ở trang khác, cho phép truy cập
-      if (token && pathname !== '/') {
-        return;
-      }
+      // Các trường hợp còn lại không cần làm gì
     };
 
     checkAuth();
@@ -65,13 +67,18 @@ export default function RootLayout() {
       {/* Staff */}
       <Stack.Screen name="screens/staff/StaffScreen" options={{ headerShown: false }} />
       <Stack.Screen name="screens/staff/RegisterStaffScreen" options={{ headerShown: false }} />
-      <Stack.Screen name="screens/statistics/StatisticsScreen" options={{ headerShown: false }} />
-      {/* Voucher */} 
+      <Stack.Screen name="screens/staff/UpdateStaffScreen" options={{ headerShown: false }} />
+      {/* Statistics */}
+      <Stack.Screen name="screens/StatisticsScreen" options={{ headerShown: false }} />
+      {/* Voucher */}
       <Stack.Screen name="screens/voucher/VoucherScreen" options={{ headerShown: false }} />
       <Stack.Screen name="screens/voucher/suavoucher" options={{ headerShown: false }} />
       <Stack.Screen name="screens/voucher/themvoucher" options={{ headerShown: false }} />
       {/* Auth */}
-      <Stack.Screen name="screens/auth/ChangePasswordScreen" options={{ headerShown: false }} />  
+      <Stack.Screen name="screens/auth/ChangePasswordScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/auth/ResetPasswordScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/auth/ForgotPasswordScreen" options={{ headerShown: false }} />
+      <Stack.Screen name="screens/auth/VerifyOTPScreen" options={{ headerShown: false }} />
     </Stack>
   );
 }

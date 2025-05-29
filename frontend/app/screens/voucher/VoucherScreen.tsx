@@ -7,9 +7,8 @@ import { useEffect, useState } from 'react';
 import { voucherService } from '@/services/voucherapi';
 import { Voucher } from '@/types';
 import AlertDialog from '@/components/AlertDialog';
-import { getUserFromToken, getPermissionsByRole } from '@/services/authapi';
-import type { Permissions } from '@/services/authapi';
-import { fetchVoucher } from '@/services/createorderapi';
+import { getUserFromToken } from '@/services/authapi';
+import { checkPermissionAPI } from '@/services/checkpermissionapi';
 
 // Map hiển thị text cho từng loại sản phẩm
 const LOAI_SAN_PHAM_TEXT: { [key: string]: string } = {
@@ -27,14 +26,14 @@ const isVoucherExpired = (voucher: Voucher): boolean => {
 };
 
 export default function VoucherScreen() {
-  const [voucher, setVoucher] = useState<Voucher[]>([]);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedVoucherId, setSelectedVoucherId] = useState<string | null>(null);
-  const [permissions, setPermissions] = useState<Permissions>({
-    canView: true,
+  const [permissions, setPermissions] = useState({
+    canView: false,
     canAdd: false,
     canEdit: false,
     canDelete: false
@@ -44,61 +43,78 @@ export default function VoucherScreen() {
   const { refresh } = useLocalSearchParams();
 
   useEffect(() => {
-    // Lấy thông tin quyền hạn
-    const getPermissions = async () => {
-      try {
-        const user = await getUserFromToken();
-        if (user) {
-          setPermissions(getPermissionsByRole(user.ChucVuNV));
-        }
-      } catch (error) {
-        console.error('Lỗi khi lấy quyền hạn:', error);
-      }
-    };
-
-    getPermissions();
-    fetchVoucher();
+    // Check user permissions when component mounts
+    checkUserPermissions();
+    fetchVouchers();
   }, [refresh]);
 
-  const fetchVoucher = async () => {
+  const checkUserPermissions = async () => {
+    try {
+      // Get user info from token
+      const user = await getUserFromToken();
+
+      if (!user) {
+        // No token or invalid token
+        setPermissions({
+          canView: false,
+          canAdd: false,
+          canEdit: false,
+          canDelete: false
+        });
+        return;
+      }
+
+      // Check voucher view permission
+      const canView = await checkPermissionAPI(user.ChucVuNV, 'voucher.view');
+
+      // Check add/edit/delete permissions if can view
+      let canAdd = false;
+      let canEdit = false;
+      let canDelete = false;
+
+      if (canView) {
+        canAdd = await checkPermissionAPI(user.ChucVuNV, 'voucher.create');
+        canEdit = await checkPermissionAPI(user.ChucVuNV, 'voucher.update');
+        canDelete = await checkPermissionAPI(user.ChucVuNV, 'voucher.delete');
+      }
+
+      setPermissions({
+        canView,
+        canAdd,
+        canEdit,
+        canDelete
+      });
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+    }
+  };
+
+  const fetchVouchers = async () => {
     try {
       setLoading(true);
-
-      console.log('Đang kết nối để lấy danh sách sách...');
       const data = await voucherService.getAllVouchers();
-      // console.log('Dữ liệu nhận được:', data);
-
-      setVoucher(data || []);
+      setVouchers(data || []);
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Chi tiết lỗi:', err);
-      setError(`Không thể tải danh sách sách: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
-      setVoucher([]);
+      const errorMessage = err.response?.data?.error || err.error || err.message || 'Lỗi không xác định';
+      setError(`Không thể tải danh sách voucher: ${errorMessage}`);
+      setVouchers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredVouchers = voucher
-    .filter(item =>
-      item.tenvoucher.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.loaisp.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    .sort((a, b) => {
-      // Sort by expiration status first (active vouchers first)
-      const aExpired = isVoucherExpired(a);
-      const bExpired = isVoucherExpired(b);
-      if (aExpired !== bExpired) {
-        return aExpired ? 1 : -1;
-      }
-      // Then sort by end date (earlier end dates first)
-      return new Date(a.thoigianketthucvoucher).getTime() - new Date(b.thoigianketthucvoucher).getTime();
-    });
+  const filteredVouchers = vouchers.filter(item =>
+    item.tenvoucher.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleVoucherPress = (id: string) => {
+    // Chỉ cho phép xem hoặc sửa voucher nếu có quyền
     if (permissions.canEdit) {
       router.push(`./suavoucher?id=${id}`);
     } else {
+      // Nếu chỉ có quyền xem, hiển thị thông báo
       Alert.alert(
         "Thông báo",
         "Bạn chỉ có quyền xem thông tin voucher, không thể chỉnh sửa.",
@@ -108,6 +124,7 @@ export default function VoucherScreen() {
   };
 
   const handleLongPress = (id: string) => {
+    // Chỉ hiển thị dialog xóa nếu có quyền xóa
     if (permissions.canDelete) {
       setSelectedVoucherId(id);
       setShowDeleteDialog(true);
@@ -119,141 +136,31 @@ export default function VoucherScreen() {
 
     try {
       await voucherService.deleteVoucher(selectedVoucherId);
-      setVoucher(voucher.filter(voucher => voucher.idvoucher.toString() !== selectedVoucherId));
+      setVouchers(vouchers.filter(voucher => voucher.idvoucher.toString() !== selectedVoucherId));
       setShowDeleteDialog(false);
       setSelectedVoucherId(null);
-    } catch (error) {
-      console.error('Lỗi khi xóa sách:', error);
-      Alert.alert("Lỗi", "Không thể xóa sách, vui lòng thử lại sau");
-    }
-  };
-
-  const handleQuickDelete = async (id: string) => {
-    if (!permissions.canDelete) {
-      Alert.alert(
-        "Thông báo",
-        "Bạn không có quyền xóa voucher.",
-        [{ text: "Đã hiểu" }]
-      );
-      return;
-    }
-
-    try {
-      await voucherService.deleteVoucher(id);
-      setVoucher(voucher.filter(voucher => voucher.idvoucher.toString() !== id));
     } catch (error) {
       console.error('Lỗi khi xóa voucher:', error);
       Alert.alert("Lỗi", "Không thể xóa voucher, vui lòng thử lại sau");
     }
   };
 
-  const handleDeleteAllExpired = async () => {
-    if (!permissions.canDelete) {
-      Alert.alert(
-        "Thông báo",
-        "Bạn không có quyền xóa voucher.",
-        [{ text: "Đã hiểu" }]
-      );
-      return;
-    }
-
-    Alert.alert(
-      "Xác nhận xóa",
-      "Bạn có chắc chắn muốn xóa tất cả voucher đã hết hạn?",
-      [
-        {
-          text: "Hủy",
-          style: "cancel"
-        },
-        {
-          text: "Xóa",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const expiredVouchers = voucher.filter(v => isVoucherExpired(v));
-              for (const v of expiredVouchers) {
-                await voucherService.deleteVoucher(v.idvoucher.toString());
-              }
-              setVoucher(voucher.filter(v => !isVoucherExpired(v)));
-            } catch (error) {
-              console.error('Lỗi khi xóa voucher hết hạn:', error);
-              Alert.alert("Lỗi", "Không thể xóa một số voucher, vui lòng thử lại sau");
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const renderVoucherItem = ({ item }: { item: Voucher }) => {
-    const isExpired = isVoucherExpired(item);
-    
+  // If user doesn't have view permission, show error
+  if (!permissions.canView && !loading) {
     return (
-      <TouchableOpacity
-        style={[
-          styles.voucherItem,
-          isExpired && styles.expiredVoucherItem
-        ]}
-        onPress={() => handleVoucherPress(item.idvoucher.toString())}
-        onLongPress={() => permissions.canDelete && handleLongPress(item.idvoucher.toString())}
-      >
-        <View style={styles.voucherHeader}>
-          <Text style={[
-            styles.voucherName,
-            isExpired && styles.expiredText
-          ]}>
-            {item.tenvoucher}
-          </Text>
-          {isExpired && (
-            <View style={styles.expiredLabel}>
-              <Text style={styles.expiredLabelText}>Đã hết hạn</Text>
-            </View>
-          )}
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centeredContent}>
+          <Text style={styles.errorText}>Bạn không có quyền xem trang này.</Text>
+          <TouchableOpacity
+            style={styles.backToHomeButton}
+            onPress={() => router.push('./HomeScreen')}
+          >
+            <Text style={styles.backToHomeText}>Quay về trang chủ</Text>
+          </TouchableOpacity>
         </View>
-        
-        <Text style={[
-          styles.voucherType,
-          isExpired && styles.expiredText
-        ]}>
-          Loại sản phẩm: {LOAI_SAN_PHAM_TEXT[item.loaisp] || item.loaisp}
-        </Text>
-        
-        <Text style={[
-          styles.voucherDiscount,
-          isExpired && styles.expiredText
-        ]}>
-          Giảm giá: {item.giamgia}%
-        </Text>
-
-        <View style={styles.actionButtons}>
-          {permissions.canEdit && (
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => router.push(`./suavoucher?id=${item.idvoucher}`)}
-            >
-              <FontAwesome name="edit" size={16} color="#007bff" />
-              <Text style={styles.editButtonText}>Sửa</Text>
-            </TouchableOpacity>
-          )}
-
-          {permissions.canDelete && (
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => handleLongPress(item.idvoucher.toString())}
-            >
-              <FontAwesome name="trash" size={16} color="#dc3545" />
-              <Text style={styles.deleteButtonText}>Xóa</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </TouchableOpacity>
+      </SafeAreaView>
     );
-  };
-
-  // Component trống để thêm vào cuối danh sách, tạo khoảng trống
-  const ListFooterComponent = () => (
-    <View style={{ height: 70, backgroundColor: 'transparent' }} />
-  );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -269,7 +176,7 @@ export default function VoucherScreen() {
               <Text style={styles.title}>Danh sách voucher</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.iconContainer} onPress={fetchVoucher}>
+          <TouchableOpacity style={styles.iconContainer} onPress={fetchVouchers}>
             <FontAwesome name="refresh" size={20} color="#666" />
           </TouchableOpacity>
         </View>
@@ -277,22 +184,12 @@ export default function VoucherScreen() {
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Tìm kiếm tên voucher"
+            placeholder="Tìm kiếm voucher theo tên"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           <FontAwesome name="search" size={16} color="gray" style={styles.searchIcon} />
         </View>
-
-        {permissions.canDelete && voucher.some(isVoucherExpired) && (
-          <TouchableOpacity 
-            style={styles.deleteAllExpiredButton}
-            onPress={handleDeleteAllExpired}
-          >
-            <FontAwesome name="trash" size={16} color="#fff" />
-            <Text style={styles.deleteAllExpiredButtonText}>Xóa tất cả voucher hết hạn</Text>
-          </TouchableOpacity>
-        )}
 
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -302,7 +199,7 @@ export default function VoucherScreen() {
         ) : error ? (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={fetchVoucher}>
+            <TouchableOpacity style={styles.retryButton} onPress={fetchVouchers}>
               <Text style={styles.retryButtonText}>Thử lại</Text>
             </TouchableOpacity>
           </View>
@@ -311,26 +208,58 @@ export default function VoucherScreen() {
             <FlatList
               data={filteredVouchers}
               keyExtractor={item => item.idvoucher.toString()}
-              renderItem={renderVoucherItem}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.voucherItem}
+                  onPress={() => handleVoucherPress(item.idvoucher.toString())}
+                  onLongPress={() => permissions.canDelete && handleLongPress(item.idvoucher.toString())}
+                >
+                  <Text style={styles.voucherName}>{item.tenvoucher}</Text>
+                  <Text style={styles.voucherDetails}>
+                    Loại sản phẩm: {item.loaisp} | Giảm giá: {item.giamgia}%
+                  </Text>
+                  <Text style={styles.voucherDate}>
+                    Thời gian: {new Date(item.thoigianbatdauvoucher).toLocaleDateString()} - {new Date(item.thoigianketthucvoucher).toLocaleDateString()}
+                  </Text>
+
+                  {/* Hiển thị các nút tùy theo quyền */}
+                  {permissions.canEdit && (
+                    <View style={styles.actionButtons}>
+                      <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() => router.push(`./suavoucher?id=${item.idvoucher}`)}
+                      >
+                        <FontAwesome name="edit" size={16} color="#007bff" />
+                        <Text style={styles.editButtonText}>Sửa</Text>
+                      </TouchableOpacity>
+
+                      {permissions.canDelete && (
+                        <TouchableOpacity
+                          style={styles.deleteButton}
+                          onPress={() => handleLongPress(item.idvoucher.toString())}
+                        >
+                          <FontAwesome name="trash" size={16} color="#dc3545" />
+                          <Text style={styles.deleteButtonText}>Xóa</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
               contentContainerStyle={styles.listContent}
               ListEmptyComponent={
                 <View style={styles.errorContainer}>
                   <Text style={styles.errorText}>
-                    {searchQuery ? 'Không tìm thấy voucher phù hợp' : 'Chưa có voucher nào trong thư viện'}
+                    {searchQuery ? 'Không tìm thấy voucher phù hợp' : 'Chưa có voucher nào'}
                   </Text>
                 </View>
               }
+              ListFooterComponent={() => <View style={{ height: 70 }} />}
             />
           </ScrollView>
         )}
 
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push('./themvoucher')}
-        >
-          <Text style={styles.addButtonText}>Thêm voucher</Text>
-        </TouchableOpacity>
-        {/* Chỉ hiển thị nút thêm sách nếu có quyền thêm */}
+        {/* Chỉ hiển thị nút thêm voucher nếu có quyền thêm */}
         {permissions.canAdd && (
           <TouchableOpacity
             style={styles.addButton}
@@ -420,77 +349,19 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 8,
   },
-  expiredVoucherItem: {
-    backgroundColor: '#f5f5f5',
-    opacity: 0.8,
-  },
-  voucherHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
   voucherName: {
     fontSize: 15,
     fontWeight: 'bold',
-    flex: 1,
   },
-  voucherType: {
+  voucherDetails: {
     fontSize: 13,
-    color: '#333',
+    color: '#666',
     marginTop: 3,
   },
-  voucherDiscount: {
+  voucherDate: {
     fontSize: 13,
-    color: '#E4434A',
+    color: '#666',
     marginTop: 3,
-    fontWeight: 'bold',
-  },
-  expiredText: {
-    color: '#999',
-  },
-  expiredLabel: {
-    backgroundColor: '#999',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  expiredLabelText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 8,
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e7f3ff',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  editButtonText: {
-    color: '#007bff',
-    marginLeft: 4,
-    fontSize: 12,
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffebee',
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 4,
-  },
-  deleteButtonText: {
-    color: '#dc3545',
-    marginLeft: 4,
-    fontSize: 12,
   },
   addButton: {
     backgroundColor: '#E4434A',
@@ -539,33 +410,51 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
-  quantityContainer: {
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+  },
+  editButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 3,
+    backgroundColor: '#e7f3ff',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+    marginRight: 8,
   },
-  quantityText: {
-    fontSize: 13,
-    fontWeight: 'bold',
+  editButtonText: {
+    color: '#007bff',
+    marginLeft: 4,
+    fontSize: 12,
   },
-  quantityLabel: {
-    fontSize: 13,
-    color: '#666',
-    marginLeft: 5,
-  },
-  deleteAllExpiredButton: {
+  deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#ffebee',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+  },
+  deleteButtonText: {
+    color: '#dc3545',
+    marginLeft: 4,
+    fontSize: 12,
+  },
+  centeredContent: {
+    flex: 1,
     justifyContent: 'center',
-    backgroundColor: '#dc3545',
+    alignItems: 'center',
+  },
+  backToHomeButton: {
+    backgroundColor: '#E4434A',
     padding: 10,
     borderRadius: 5,
-    marginBottom: 15,
   },
-  deleteAllExpiredButtonText: {
-    color: '#fff',
-    marginLeft: 8,
-    fontSize: 14,
+  backToHomeText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, Pressable, ActivityIndicator } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Text, View } from '@/components/Themed';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { ingredientService } from '@/services/ingredientapi';
 import ToastMessage from '@/components/ToastMessage';
 import AlertDialog from '@/components/AlertDialog';
+import { Platform } from 'react-native';
 
 export default function EditIngredientScreen() {
   const { id } = useLocalSearchParams();
@@ -14,6 +15,7 @@ export default function EditIngredientScreen() {
   const [tenNguyenLieu, setTenNguyenLieu] = useState('');
   const [soLuong, setSoLuong] = useState('');
   const [giaNhap, setGiaNhap] = useState('');
+  const [donVi, setDonVi] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [toast, setToast] = useState({
@@ -23,6 +25,22 @@ export default function EditIngredientScreen() {
   });
   const [confirmDialog, setConfirmDialog] = useState(false);
   const router = useRouter();
+
+  const showMessage = (message: string, type: 'info' | 'error' | 'success') => {
+    if (Platform.OS === 'web') {
+      setToast({
+        visible: true,
+        message,
+        type
+      });
+    } else {
+      Alert.alert(
+        type === 'error' ? 'Lỗi' : type === 'success' ? 'Thành công' : 'Thông báo',
+        message,
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -37,12 +55,10 @@ export default function EditIngredientScreen() {
       setTenNguyenLieu(ingredient.ten_nguyen_lieu);
       setSoLuong(ingredient.so_luong);
       setGiaNhap(ingredient.gia_nhap.toString());
-    } catch (error) {
-      setToast({
-        visible: true,
-        message: `Không thể tải thông tin: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`,
-        type: 'error'
-      });
+      setDonVi(ingredient.don_vi);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.error || error.message || 'Không thể thêm voucher. Vui lòng thử lại!';
+      showMessage(errorMessage, 'error');
     } finally {
       setLoadingInitial(false);
     }
@@ -50,12 +66,8 @@ export default function EditIngredientScreen() {
 
   const handleUpdateIngredient = async () => {
     // Validation
-    if (!tenNguyenLieu.trim() || !soLuong.trim() || !giaNhap.trim()) {
-      setToast({
-        visible: true,
-        message: 'Vui lòng điền đầy đủ thông tin!',
-        type: 'error'
-      });
+    if (!tenNguyenLieu.trim() || !soLuong.trim() || !giaNhap.trim() || !donVi.trim()) {
+      showMessage('Vui lòng điền đầy đủ thông tin!', 'error');
       return;
     }
 
@@ -64,14 +76,11 @@ export default function EditIngredientScreen() {
       await ingredientService.updateIngredient(idString, {
         ten_nguyen_lieu: tenNguyenLieu,
         so_luong: parseInt(soLuong),
+        don_vi: donVi,
         gia_nhap: parseInt(giaNhap)
       });
 
-      setToast({
-        visible: true,
-        message: 'Cập nhật nguyên liệu thành công!',
-        type: 'success'
-      });
+      showMessage('Cập nhật nguyên liệu thành công!', 'success');
 
       // Navigate back to list with refresh parameter
       setTimeout(() => {
@@ -80,12 +89,9 @@ export default function EditIngredientScreen() {
           params: { refresh: new Date().getTime() }
         });
       }, 1500);
-    } catch (error) {
-      setToast({
-        visible: true,
-        message: 'Không thể cập nhật nguyên liệu. Vui lòng thử lại!',
-        type: 'error'
-      });
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Không thể cập nhật nguyên liệu. Vui lòng thử lại!';
+      showMessage(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -96,11 +102,7 @@ export default function EditIngredientScreen() {
       setLoading(true);
       await ingredientService.deleteIngredient(idString);
 
-      setToast({
-        visible: true,
-        message: 'Đã xóa nguyên liệu thành công!',
-        type: 'success'
-      });
+      showMessage('Đã xóa nguyên liệu thành công!', 'success');
 
       // Navigate back to list with refresh parameter
       setTimeout(() => {
@@ -109,12 +111,9 @@ export default function EditIngredientScreen() {
           params: { refresh: new Date().getTime() }
         });
       }, 1500);
-    } catch (error) {
-      setToast({
-        visible: true,
-        message: 'Không thể xóa nguyên liệu. Vui lòng thử lại!',
-        type: 'error'
-      });
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Không thể xóa nguyên liệu. Vui lòng thử lại!';
+      showMessage(errorMessage, 'error');
       setLoading(false);
     }
   };
@@ -175,6 +174,16 @@ export default function EditIngredientScreen() {
             onChangeText={setGiaNhap}
             placeholder="Nhập giá nhập"
             keyboardType="numeric"
+          />
+        </View>
+
+        <View style={styles.formSection}>
+          <Text style={styles.label}>Đơn vị *</Text>
+          <TextInput
+            style={styles.input}
+            value={donVi}
+            onChangeText={setDonVi}
+            placeholder="Nhập đơn vị"
           />
         </View>
       </View>

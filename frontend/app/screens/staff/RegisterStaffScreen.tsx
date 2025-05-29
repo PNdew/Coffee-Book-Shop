@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { registerStaff, getChucVu, RegisterStaffData, ChucVu } from '../../../services/staffapi';
-import AlertDialog from '../../../components/AlertDialog'; // Giả sử đường dẫn tới AlertDialog
+import { registerStaff, getChucVu, RegisterStaffData, ChucVu } from '@/services/staffapi';
+import AlertDialog from '@/components/AlertDialog'; // Giả sử đường dẫn tới AlertDialog
+import { getUserFromToken } from '@/services/authapi';
+import { checkPermissionAPI } from '@/services/checkpermissionapi';
 
 const RegisterStaffScreen = () => {
   const router = useRouter();
@@ -12,6 +14,9 @@ const RegisterStaffScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertInfo, setAlertInfo] = useState({ title: '', message: '', isSuccess: false });
+  const [permissions, setPermissions] = useState({
+    canCreate: false
+  });
 
   // Form state
   const [formData, setFormData] = useState<RegisterStaffData>({
@@ -24,8 +29,47 @@ const RegisterStaffScreen = () => {
   });
 
   useEffect(() => {
+    checkUserPermissions();
     fetchChucVu();
   }, []);
+
+  const checkUserPermissions = async () => {
+    try {
+      // Get user info from token
+      const user = await getUserFromToken();
+
+      if (!user) {
+        // No token or invalid token
+        setPermissions({
+          canCreate: false
+        });
+        return;
+      }
+
+      // Check staff create permission
+      const canCreate = await checkPermissionAPI(user.ChucVuNV, 'nhanvien.create');
+
+      setPermissions({
+        canCreate
+      });
+
+      // If user doesn't have create permission, redirect to home
+      if (!canCreate) {
+        Alert.alert(
+          "Thông báo",
+          "Bạn không có quyền tạo nhân viên mới.",
+          [
+            { 
+              text: "Đã hiểu",
+              onPress: () => router.push('../HomeScreen')
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+    }
+  };
 
   const fetchChucVu = async () => {
     try {
@@ -98,6 +142,23 @@ const RegisterStaffScreen = () => {
       setLoading(false);
     }
   };
+
+  // If user doesn't have create permission, show error
+  if (!permissions.canCreate && !loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.centeredContent}>
+          <Text style={styles.errorText}>Bạn không có quyền tạo nhân viên mới.</Text>
+          <TouchableOpacity
+            style={styles.backToHomeButton}
+            onPress={() => router.push('../HomeScreen')}
+          >
+            <Text style={styles.backToHomeText}>Quay về trang chủ</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -305,6 +366,27 @@ const styles = StyleSheet.create({
   },
   registerButtonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  centeredContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#d32f2f',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  backToHomeButton: {
+    backgroundColor: '#E4434A',
+    padding: 10,
+    borderRadius: 5,
+  },
+  backToHomeText: {
+    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },

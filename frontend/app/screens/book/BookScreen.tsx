@@ -7,8 +7,8 @@ import { useEffect, useState } from 'react';
 import { bookService } from '@/services/bookapi';
 import { Book } from '@/types';
 import AlertDialog from '@/components/AlertDialog';
-import { getUserFromToken, getPermissionsByRole } from '@/services/authapi';
-import type { Permissions } from '@/services/authapi';
+import { getUserFromToken } from '@/services/authapi';
+import { checkPermissionAPI } from '@/services/checkpermissionapi';
 
 export default function SachScreen() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -17,8 +17,8 @@ export default function SachScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
-  const [permissions, setPermissions] = useState<Permissions>({
-    canView: true,
+  const [permissions, setPermissions] = useState({
+    canView: false,
     canAdd: false,
     canEdit: false,
     canDelete: false
@@ -28,21 +28,51 @@ export default function SachScreen() {
   const { refresh } = useLocalSearchParams();
 
   useEffect(() => {
-    // Lấy thông tin quyền hạn
-    const getPermissions = async () => {
-      try {
-        const user = await getUserFromToken();
-        if (user) {
-          setPermissions(getPermissionsByRole(user.ChucVuNV));
-        }
-      } catch (error) {
-        console.error('Lỗi khi lấy quyền hạn:', error);
-      }
-    };
-
-    getPermissions();
+    // Check user permissions when component mounts
+    checkUserPermissions();
     fetchBooks();
   }, [refresh]);
+
+  const checkUserPermissions = async () => {
+    try {
+      // Get user info from token
+      const user = await getUserFromToken();
+
+      if (!user) {
+        // No token or invalid token
+        setPermissions({
+          canView: false,
+          canAdd: false,
+          canEdit: false,
+          canDelete: false
+        });
+        return;
+      }
+
+      // Check book view permission
+      const canView = await checkPermissionAPI(user.ChucVuNV, 'sach.view');
+
+      // Check add/edit/delete permissions if can view
+      let canAdd = false;
+      let canEdit = false;
+      let canDelete = false;
+
+      if (canView) {
+        canAdd = await checkPermissionAPI(user.ChucVuNV, 'sach.create');
+        canEdit = await checkPermissionAPI(user.ChucVuNV, 'sach.update');
+        canDelete = await checkPermissionAPI(user.ChucVuNV, 'sach.delete');
+      }
+
+      setPermissions({
+        canView,
+        canAdd,
+        canEdit,
+        canDelete
+      });
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+    }
+  };
 
   const fetchBooks = async () => {
     try {
@@ -116,6 +146,23 @@ export default function SachScreen() {
   const ListFooterComponent = () => (
     <View style={{ height: 70, backgroundColor: 'transparent' }} />
   );
+
+  // If user doesn't have view permission, show error
+  if (!permissions.canView && !loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centeredContent}>
+          <Text style={styles.errorText}>Bạn không có quyền xem trang này.</Text>
+          <TouchableOpacity
+            style={styles.backToHomeButton}
+            onPress={() => router.push('./HomeScreen')}
+          >
+            <Text style={styles.backToHomeText}>Quay về trang chủ</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -212,12 +259,6 @@ export default function SachScreen() {
           </ScrollView>
         )}
 
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push('./themsach')}
-        >
-          <Text style={styles.addButtonText}>Thêm sách</Text>
-        </TouchableOpacity>
         {/* Chỉ hiển thị nút thêm sách nếu có quyền thêm */}
         {permissions.canAdd && (
           <TouchableOpacity
@@ -419,5 +460,20 @@ const styles = StyleSheet.create({
     color: '#dc3545',
     marginLeft: 4,
     fontSize: 12,
+  },
+  centeredContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backToHomeButton: {
+    backgroundColor: '#E4434A',
+    padding: 10,
+    borderRadius: 5,
+  },
+  backToHomeText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

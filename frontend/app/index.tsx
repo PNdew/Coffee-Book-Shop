@@ -17,7 +17,7 @@ const LoginScreen = () => {
       const user = await login(SDTNV, MatKhau);
       
       if (user) {
-        Alert.alert("Đăng nhập thành công");
+        Alert.alert("Đăng nhập thành công", "Chào mừng " + user.TenNV);
         // Điều hướng đến trang Home
         router.push("./screens/HomeScreen");
       } else {
@@ -53,7 +53,10 @@ const LoginScreen = () => {
         </View>
 
         <View>
-          <TouchableOpacity style={styles.forgotPwBtn}>
+          <TouchableOpacity 
+            style={styles.forgotPwBtn} 
+            onPress={() => router.push('/screens/auth/ForgotPasswordScreen')}
+          >
             <Text style={{ color: "#00000080" }}>Quên mật khẩu</Text>
           </TouchableOpacity>
         </View>

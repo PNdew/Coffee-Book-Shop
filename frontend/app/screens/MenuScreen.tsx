@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, SafeAreaView, TextInput, Modal, Pressable, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, SafeAreaView, TextInput, Modal, Pressable, ActivityIndicator, Alert, ScrollView, Platform } from 'react-native';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { SanphamAPI } from '@/types';
 import { productService } from '@/services/productapi';
 import { getUserFromToken } from '@/services/authapi';
 import { checkPermissionAPI } from '@/services/checkpermissionapi';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import AlertDialog from '@/components/AlertDialog';
 
 export default function MenuScreen() {
@@ -20,6 +20,15 @@ export default function MenuScreen() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [toast, setToast] = useState<{
+    visible: boolean;
+    message: string;
+    type: 'info' | 'error' | 'success';
+  }>({
+    visible: false,
+    message: '',
+    type: 'info'
+  });
 
   // Modal states
   const [selectedProduct, setSelectedProduct] = useState<SanphamAPI | null>(null);
@@ -49,21 +58,46 @@ export default function MenuScreen() {
     { id: 'doan', name: 'Đồ ăn' },
   ];
 
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   useEffect(() => {
     // Check user permissions when component mounts
     checkUserPermissions();
 
     // Load products
     loadProducts();
+
+    // Add image picker permission request
+    (async () => {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Thông báo', 'Cần quyền truy cập thư viện ảnh để chọn ảnh sản phẩm.');
+        }
+      }
+    })();
   }, [refresh]);
+
+  const showMessage = (message: string, type: 'info' | 'error' | 'success') => {
+    if (Platform.OS === 'web') {
+      setToast({
+        visible: true,
+        message,
+        type
+      });
+    } else {
+      Alert.alert(
+        type === 'error' ? 'Lỗi' : type === 'success' ? 'Thành công' : 'Thông báo',
+        message,
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   const checkUserPermissions = async () => {
     try {
-      // Get user info from token
       const user = await getUserFromToken();
-
       if (!user) {
-        // No token or invalid token
         setPermissions({
           canView: false,
           canAdd: false,
@@ -73,10 +107,7 @@ export default function MenuScreen() {
         return;
       }
 
-      // Check menu view permission
       const canView = await checkPermissionAPI(user.ChucVuNV, 'menu.view');
-
-      // Check add/edit/delete permissions if can view
       let canAdd = false;
       let canEdit = false;
       let canDelete = false;
@@ -93,8 +124,9 @@ export default function MenuScreen() {
         canEdit,
         canDelete
       });
-    } catch (error) {
-      console.error('Error checking permissions:', error);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Không thể kiểm tra quyền truy cập';
+      showMessage(errorMessage, 'error');
     }
   };
 
@@ -102,41 +134,36 @@ export default function MenuScreen() {
     try {
       setLoading(true);
       const data = await productService.getAllProducts();
-
       if (!data || data.length === 0) {
-        setError('No products available');
+        setError('Không có sản phẩm nào');
         return;
       }
-
       setProducts(data);
       filterProducts(data, activeCategory, searchQuery);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Không thể tải danh sách sản phẩm';
+      setError(errorMessage);
+      showMessage(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter products by category and search query
-  // Filter products by category and search query
   const filterProducts = (products: SanphamAPI[], category: string, query: string = '') => {
     let filtered = products;
 
-    // Filter by category
     if (category !== 'all') {
       filtered = filtered.filter(item =>
         item.loaisp?.toLowerCase() === category.toLowerCase()
       );
     }
 
-    // Filter by search query
     if (query.trim()) {
       filtered = filtered.filter(item =>
         item.tensp.toLowerCase().includes(query.toLowerCase())
       );
     }
 
-    // Sort products alphabetically by name (A-Z)
     filtered = [...filtered].sort((a, b) =>
       a.tensp.localeCompare(b.tensp, 'vi-VN')
     );
@@ -144,19 +171,16 @@ export default function MenuScreen() {
     setFilteredProducts(filtered);
   };
 
-  // Handle category selection
   const handleCategoryPress = (category: string) => {
     setActiveCategory(category);
     filterProducts(products, category, searchQuery);
   };
 
-  // Handle search
   const handleSearch = (text: string) => {
     setSearchQuery(text);
     filterProducts(products, activeCategory, text);
   };
 
-  // Display product type name based on code
   const getDisplayProductType = (loaisp: string): string => {
     if (loaisp === 'DoUong' || loaisp?.toLowerCase() === 'douong') return 'Đồ uống';
     if (loaisp === 'DoAn' || loaisp?.toLowerCase() === 'doan') return 'Đồ ăn';
@@ -164,11 +188,8 @@ export default function MenuScreen() {
     return loaisp;
   };
 
-  // Handle viewing product details
   const handleViewProductDetails = (product: SanphamAPI) => {
     setSelectedProduct(product);
-
-    // Map product type from old to new
     let loaisp = 'DoUong';
     if (product.loaisp?.toLowerCase() === 'douong' || product.loaisp === 'DoUong') {
       loaisp = 'DoUong';
@@ -184,11 +205,9 @@ export default function MenuScreen() {
       giasp: product.giasp.toString(),
       trangthai: product.trangthaisp === 1 ? 'Còn' : 'Hết'
     });
-
     setShowProductDetails(true);
   };
 
-  // Handle adding new product
   const handleAddProduct = () => {
     setSelectedProduct(null);
     setFormData({
@@ -200,47 +219,84 @@ export default function MenuScreen() {
     setShowAddProduct(true);
   };
 
-  // Handle saving new product
+  const pickImage = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        
+        input.onchange = (e: any) => {
+          const file = e.target.files[0];
+          if (file) {
+            // Check file size (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+              Alert.alert('Lỗi', 'Kích thước ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 2MB.');
+              return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              setSelectedImage(event.target?.result as string);
+            };
+            reader.readAsDataURL(file);
+          }
+        };
+        
+        input.click();
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Thông báo', 'Cần quyền truy cập thư viện ảnh để chọn ảnh sản phẩm.');
+          return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.7,
+        });
+
+        if (!result.canceled) {
+          setSelectedImage(result.assets[0].uri);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Lỗi', 'Không thể chọn ảnh. Vui lòng thử lại.');
+    }
+  };
+
   const handleSaveProduct = async () => {
     try {
-      // Check if user has permission to add products
       if (!permissions.canAdd) {
-        console.log('Không có quyền thêm sản phẩm mới');
-        Alert.alert('Thông báo', 'Bạn không có quyền thêm sản phẩm mới.');
+        showMessage('Bạn không có quyền thêm sản phẩm mới.', 'error');
         return;
       }
 
-      // Validate form data
       if (!formData.tensp.trim()) {
-        console.log('Vui lòng nhập tên sản phẩm');
-        Alert.alert('Thông báo', 'Vui lòng nhập tên sản phẩm');
+        showMessage('Vui lòng nhập tên sản phẩm', 'error');
         return;
       }
 
       if (!formData.giasp.trim() || isNaN(parseFloat(formData.giasp))) {
-        console.log('Vui lòng nhập giá sản phẩm hợp lệ');
-        Alert.alert('Thông báo', 'Vui lòng nhập giá sản phẩm hợp lệ');
+        showMessage('Vui lòng nhập giá sản phẩm hợp lệ', 'error');
         return;
       }
 
-      // Check if product with same name already exists
       const productExists = products.some(
         product => product.tensp.toLowerCase() === formData.tensp.toLowerCase()
       );
 
       if (productExists) {
-        console.log('Sản phẩm với tên này đã tồn tại. Vui lòng chọn tên khác.');
-        Alert.alert(
-          'Thông báo',
-          'Sản phẩm với tên này đã tồn tại. Vui lòng chọn tên khác.'
-        );
+        showMessage('Sản phẩm với tên này đã tồn tại. Vui lòng chọn tên khác.', 'error');
         return;
       }
 
       const user = await getUserFromToken();
       if (!user) {
-        console.log('Lỗi xác thực');
-        Alert.alert('Lỗi xác thực', 'Vui lòng đăng nhập lại để thực hiện chức năng này.');
+        showMessage('Vui lòng đăng nhập lại để thực hiện chức năng này.', 'error');
         return;
       }
 
@@ -248,29 +304,27 @@ export default function MenuScreen() {
         tensp: formData.tensp,
         giasp: parseFloat(formData.giasp),
         trangthaisp: formData.trangthai === 'Còn' ? 1 : 0,
-        loaisp: formData.loaisp
+        loaisp: formData.loaisp,
+        image: selectedImage
       };
 
       await productService.createProduct(productData);
-
-      // Update product list
       loadProducts();
       setShowAddProduct(false);
-      Alert.alert('Thành công', 'Đã thêm sản phẩm mới thành công');
-    } catch (error) {
-      console.error('Error adding product:', error);
-      Alert.alert('Lỗi', 'Không thể thêm sản phẩm. Vui lòng thử lại sau.');
+      setSelectedImage(null);
+      showMessage('Đã thêm sản phẩm mới thành công', 'success');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.error || error.message || 'Không thể thêm voucher. Vui lòng thử lại!';
+      showMessage(errorMessage, 'error');
     }
   };
 
-  // Handle updating product
   const handleUpdateProduct = async () => {
     if (!selectedProduct) return;
 
     try {
-      // Check if user has permission to edit products
       if (!permissions.canEdit) {
-        Alert.alert('Permission Denied', 'You do not have permission to edit products.');
+        showMessage('Bạn không có quyền chỉnh sửa sản phẩm.', 'error');
         return;
       }
 
@@ -279,41 +333,36 @@ export default function MenuScreen() {
         tensp: formData.tensp,
         loaisp: formData.loaisp,
         giasp: parseFloat(formData.giasp),
-        trangthaisp: formData.trangthai === 'Còn' ? 1 : 0
+        trangthaisp: formData.trangthai === 'Còn' ? 1 : 0,
+        image: selectedImage
       };
 
       await productService.updateProduct(selectedProduct.idsanpham.toString(), productData);
-
-      // Update product list
       loadProducts();
       setShowProductDetails(false);
-      Alert.alert('Success', 'Product updated successfully');
-    } catch (error) {
-      console.error('Error updating product:', error);
-      Alert.alert('Error', 'Could not update product. Please try again later.');
+      setSelectedImage(null);
+      showMessage('Cập nhật sản phẩm thành công', 'success');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.error || error.message || 'Không thể thêm voucher. Vui lòng thử lại!';
+      showMessage(errorMessage, 'error');
     }
   };
 
-  // Handle delete confirmation
   const handleDeleteConfirm = async () => {
     if (!selectedProductId || !permissions.canDelete) return;
 
     try {
       await productService.deleteProduct(selectedProductId.toString());
-
-      // Reload products from server instead of just filtering the state
       await loadProducts();
-
       setShowDeleteDialog(false);
       setSelectedProductId(null);
-      Alert.alert('Thành công', 'Đã xóa sản phẩm thành công');
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      Alert.alert('Lỗi', 'Không thể xóa sản phẩm. Vui lòng thử lại sau.');
+      showMessage('Đã xóa sản phẩm thành công', 'success');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || 'Không thể xóa sản phẩm. Vui lòng thử lại sau.';
+      showMessage(errorMessage, 'error');
     }
   };
 
-  // Form input handling
   const handleInputChange = (field: string, value: string) => {
     setFormData({
       ...formData,
@@ -321,7 +370,6 @@ export default function MenuScreen() {
     });
   };
 
-  // Handle long press on product item
   const handleLongPress = (id: number) => {
     if (permissions.canDelete) {
       setSelectedProductId(id);
@@ -329,12 +377,53 @@ export default function MenuScreen() {
     }
   };
 
-  // Component for list footer spacing
   const ListFooterComponent = () => (
     <View style={{ height: 70, backgroundColor: 'transparent' }} />
   );
 
-  // If user doesn't have view permission, show error
+  // Update the image display in product list
+  const renderProductImage = (item: SanphamAPI) => {
+    if (item.hinhanh) {
+      return (
+        <Image
+          source={{ uri: item.hinhanh }}
+          style={styles.productImage}
+          defaultSource={require('@/assets/images/default-coffee.png')}
+        />
+      );
+    }
+    return (
+      <View style={styles.imagePlaceholder}>
+        <Ionicons name="image-outline" size={40} color="#ccc" />
+      </View>
+    );
+  };
+
+  // Update the image picker container in modals
+  const renderImagePicker = (isEdit: boolean = false) => (
+    <TouchableOpacity 
+      style={styles.imagePickerContainer}
+      onPress={pickImage}
+    >
+      {selectedImage ? (
+        <Image
+          source={{ uri: selectedImage }}
+          style={styles.previewImage}
+        />
+      ) : isEdit && selectedProduct?.hinhanh ? (
+        <Image
+          source={{ uri: selectedProduct.hinhanh }}
+          style={styles.previewImage}
+        />
+      ) : (
+        <>
+          <Ionicons name="image-outline" size={50} color="#ccc" />
+          <Text style={{ color: '#666', marginTop: 8 }}>Chọn ảnh</Text>
+        </>
+      )}
+    </TouchableOpacity>
+  );
+
   if (!permissions.canView && !loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -380,7 +469,6 @@ export default function MenuScreen() {
           <FontAwesome name="search" size={16} color="gray" style={styles.searchIcon} />
         </View>
 
-        {/* Category Tabs */}
         <View style={styles.categoryContainer}>
           <View style={styles.categoryTabsRow}>
             {categories.map((category) => (
@@ -431,11 +519,7 @@ export default function MenuScreen() {
                     <Text style={styles.productPrice}>Giá: {item.giasp.toLocaleString('vi-VN')} VNĐ</Text>
                     <Text style={styles.productCategory}>Loại: {getDisplayProductType(item.loaisp)}</Text>
                   </View>
-
-                  <Image
-                    source={require('@/assets/images/default-coffee.png')}
-                    style={styles.productImage}
-                  />
+                  {renderProductImage(item)}
                 </TouchableOpacity>
               )}
               contentContainerStyle={styles.listContent}
@@ -451,7 +535,6 @@ export default function MenuScreen() {
           </ScrollView>
         )}
 
-        {/* Add Product Button */}
         {permissions.canAdd && (
           <TouchableOpacity
             style={styles.addButton}
@@ -461,7 +544,6 @@ export default function MenuScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Product Details Modal */}
         <Modal
           visible={showProductDetails}
           transparent={true}
@@ -471,12 +553,7 @@ export default function MenuScreen() {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Thông tin món</Text>
-
-              <View style={styles.imagePickerContainer}>
-                <Ionicons name="image-outline" size={50} color="#ccc" />
-                <Text style={{ color: '#666', marginTop: 8 }}>Chọn ảnh</Text>
-              </View>
-
+              {renderImagePicker(true)}
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Tên món *</Text>
                 <TextInput
@@ -486,7 +563,6 @@ export default function MenuScreen() {
                   editable={permissions.canEdit}
                 />
               </View>
-
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Loại *</Text>
                 <View style={styles.radioContainer}>
@@ -501,7 +577,6 @@ export default function MenuScreen() {
                     ]} />
                     <Text style={styles.radioLabel}>Đồ uống</Text>
                   </TouchableOpacity>
-
                   <TouchableOpacity
                     style={styles.radioOption}
                     onPress={() => handleInputChange('loaisp', 'DoAn')}
@@ -513,7 +588,6 @@ export default function MenuScreen() {
                     ]} />
                     <Text style={styles.radioLabel}>Đồ ăn</Text>
                   </TouchableOpacity>
-
                   <TouchableOpacity
                     style={styles.radioOption}
                     onPress={() => handleInputChange('loaisp', 'Khac')}
@@ -527,7 +601,6 @@ export default function MenuScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
-
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Giá *</Text>
                 <TextInput
@@ -538,7 +611,6 @@ export default function MenuScreen() {
                   editable={permissions.canEdit}
                 />
               </View>
-
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Trạng thái</Text>
                 <View style={styles.radioContainer}>
@@ -553,7 +625,6 @@ export default function MenuScreen() {
                     ]} />
                     <Text style={styles.radioLabel}>Còn hàng</Text>
                   </TouchableOpacity>
-
                   <TouchableOpacity
                     style={styles.radioOption}
                     onPress={() => handleInputChange('trangthai', 'Hết')}
@@ -567,7 +638,6 @@ export default function MenuScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
-
               <View style={styles.buttonContainer}>
                 {permissions.canDelete && (
                   <TouchableOpacity
@@ -581,7 +651,6 @@ export default function MenuScreen() {
                     <Text style={styles.deleteButtonText}>Xóa món</Text>
                   </TouchableOpacity>
                 )}
-
                 {permissions.canEdit && (
                   <TouchableOpacity
                     style={styles.updateButton}
@@ -591,7 +660,6 @@ export default function MenuScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setShowProductDetails(false)}
@@ -602,7 +670,6 @@ export default function MenuScreen() {
           </View>
         </Modal>
 
-        {/* Add Product Modal */}
         <Modal
           visible={showAddProduct}
           transparent={true}
@@ -612,12 +679,7 @@ export default function MenuScreen() {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Thêm món</Text>
-
-              <View style={styles.imagePickerContainer}>
-                <Ionicons name="image-outline" size={50} color="#ccc" />
-                <Text style={{ color: '#666', marginTop: 8 }}>Chọn ảnh</Text>
-              </View>
-
+              {renderImagePicker()}
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Tên món *</Text>
                 <TextInput
@@ -626,7 +688,6 @@ export default function MenuScreen() {
                   onChangeText={(value) => handleInputChange('tensp', value)}
                 />
               </View>
-
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Loại *</Text>
                 <View style={styles.radioContainer}>
@@ -640,7 +701,6 @@ export default function MenuScreen() {
                     ]} />
                     <Text style={styles.radioLabel}>Đồ uống</Text>
                   </TouchableOpacity>
-
                   <TouchableOpacity
                     style={styles.radioOption}
                     onPress={() => handleInputChange('loaisp', 'DoAn')}
@@ -651,7 +711,6 @@ export default function MenuScreen() {
                     ]} />
                     <Text style={styles.radioLabel}>Đồ ăn</Text>
                   </TouchableOpacity>
-
                   <TouchableOpacity
                     style={styles.radioOption}
                     onPress={() => handleInputChange('loaisp', 'Khac')}
@@ -664,7 +723,6 @@ export default function MenuScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
-
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Giá *</Text>
                 <TextInput
@@ -674,7 +732,6 @@ export default function MenuScreen() {
                   keyboardType="numeric"
                 />
               </View>
-
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Trạng thái</Text>
                 <View style={styles.radioContainer}>
@@ -688,7 +745,6 @@ export default function MenuScreen() {
                     ]} />
                     <Text style={styles.radioLabel}>Còn hàng</Text>
                   </TouchableOpacity>
-
                   <TouchableOpacity
                     style={styles.radioOption}
                     onPress={() => handleInputChange('trangthai', 'Hết')}
@@ -701,7 +757,6 @@ export default function MenuScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
-
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
                   style={[styles.updateButton, { flex: 1 }]}
@@ -710,7 +765,6 @@ export default function MenuScreen() {
                   <Text style={styles.buttonText}>Tạo món</Text>
                 </TouchableOpacity>
               </View>
-
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setShowAddProduct(false)}
@@ -721,7 +775,6 @@ export default function MenuScreen() {
           </View>
         </Modal>
 
-        {/* Delete Confirmation Dialog */}
         <AlertDialog
           visible={showDeleteDialog}
           title="Xác nhận xóa"
@@ -852,6 +905,23 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 5,
+  },
+  imagePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 5,
+    backgroundColor: '#f9f9f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  modalImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 5,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
   loadingContainer: {
     flex: 1,
@@ -1058,5 +1128,10 @@ const styles = StyleSheet.create({
     color: '#dc3545',
     marginLeft: 4,
     fontSize: 12,
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 5,
   },
 });

@@ -76,13 +76,14 @@ export default function ThemSachScreen() {
       // Điều hướng về trang danh sách sau khi thêm thành công
       setTimeout(() => {
         router.push({
-          pathname: '../sach',
+          pathname: './BookScreen',
           params: { refresh: Date.now().toString() }
         });
       }, 1500);
     } catch (err) {
       console.error('Lỗi khi thêm sách:', err);
-      setError(`Không thể thêm sách: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
+      // Hiển thị thông báo lỗi từ backend
+      setError(err instanceof Error ? err.message : 'Không thể thêm sách');
     } finally {
       setLoading(false);
     }
@@ -97,7 +98,7 @@ export default function ThemSachScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Link href="../sach" asChild>
+        <Link href="./BookScreen" asChild>
           <Pressable style={styles.backButton}>
             <FontAwesome name="arrow-left" size={20} color="black" />
           </Pressable>

@@ -2,6 +2,7 @@ import axios from 'axios';
 import { API_URL } from '@/services/getAPIUrl';
 import { StatisticsData, PieChartItem } from '@/types/statistics';
 import { format } from 'date-fns';
+import { getAuthToken } from './authapi';
 
 export const fetchStatistics = async (
   type: 'day' | 'week' | 'month',
@@ -9,9 +10,13 @@ export const fetchStatistics = async (
 ): Promise<StatisticsData> => {
   try {
     const formattedDate = format(date, 'yyyy-MM-dd');
+    const token = await getAuthToken();
     
     const response = await axios.get(`${API_URL}/statistics/`, {
-      params: { type, date: formattedDate }
+      params: { type, date: formattedDate },
+      headers: {
+        Authorization: token ? `Bearer ${token}` : ''
+      }
     });
     
     // Transform API response to match our frontend structure if needed
