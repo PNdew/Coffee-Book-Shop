@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Book Cafe",
-    "slug": "Book Cafe",
+    "name": "bookcafe",
+    "slug": "bookcafe",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.hahmii.bookcafe"
     },
     "web": {
       "title": "Book Cafe",
@@ -36,7 +37,13 @@
     },
     "extra": {
       "API_URL": "http://localhost:8000/api",
-      "API_URL_MOBILE": "http://192.168.225.15:8000/api"
+      "API_URL_MOBILE": "http://192.168.225.15:8000/api",
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "2c0ccc3d-6c9f-41ea-b65f-92a691804405"
+      }
     }
   }
 }

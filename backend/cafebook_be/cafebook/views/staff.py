@@ -25,7 +25,11 @@ class NhanVienViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         data = request.data
         ten_nv = data.get('TenNV', '').strip()
-
+        if not ten_nv:
+            return Response(
+                {"error": "Vui lòng nhập tên nhân viên"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         # Regex: chỉ cho phép chữ cái, số, khoảng trắng và một số ký tự cơ bản (.,-)
         if not re.match(r'^[\w\s\.,\-àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđĐ]+$', ten_nv, re.UNICODE):
             return Response(

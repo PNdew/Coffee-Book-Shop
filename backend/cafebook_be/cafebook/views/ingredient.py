@@ -20,20 +20,6 @@ class NguyenLieuViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         data = request.data
 
-        # Kiểm tra số lượng âm
-        try:
-            so_luong = int(data.get('so_luong', 0))
-            if so_luong < 0:
-                return Response(
-                    {"error": "Số lượng nguyên liệu không được nhỏ hơn 0"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        except ValueError:
-            return Response(
-                {"error": "Số lượng nguyên liệu phải là số nguyên"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
         try:
             gia_nhap = int(data.get('gia_nhap', 0))
             if gia_nhap < 0:
@@ -49,6 +35,11 @@ class NguyenLieuViewSet(viewsets.ModelViewSet):
         
         # Kiểm tra tên sách
         ten_nguyen_lieu = data.get('ten_nguyen_lieu', '').strip()
+        if not ten_nguyen_lieu or not gia_nhap:
+            return Response(
+                {"error": "Vui lòng nhập đầy đủ thông tin"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # Regex: chỉ cho phép chữ cái, số, khoảng trắng và một số ký tự cơ bản (.,-)
         if not re.match(r'^[\w\s\.,\-àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđĐ]+$', ten_nguyen_lieu, re.UNICODE):
@@ -56,7 +47,7 @@ class NguyenLieuViewSet(viewsets.ModelViewSet):
                 {"error": "Tên nguyên liệu chứa ký tự không hợp lệ"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
+    
         if NguyenLieu.objects.filter(ten_nguyen_lieu__iexact=ten_nguyen_lieu).exists():
             return Response(
                 {"error": f"Nguyên liệu '{ten_nguyen_lieu}' đã tồn tại"},
@@ -68,20 +59,6 @@ class NguyenLieuViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         data = request.data
 
-        # Kiểm tra số lượng âm
-        try:
-            so_luong = int(data.get('so_luong', 0))
-            if so_luong < 0:
-                return Response(
-                    {"error": "Số lượng nguyên liệu không được nhỏ hơn 0"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        except ValueError:
-            return Response(
-                {"error": "Số lượng nguyên liệu phải là số nguyên"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
         try:
             gia_nhap = int(data.get('gia_nhap', 0))
             if gia_nhap < 0:
@@ -97,7 +74,11 @@ class NguyenLieuViewSet(viewsets.ModelViewSet):
         
         # Kiểm tra tên sách
         ten_nguyen_lieu = data.get('ten_nguyen_lieu', '').strip()
-
+        if not ten_nguyen_lieu or not gia_nhap:
+            return Response(
+                {"error": "Vui lòng nhập đầy đủ thông tin"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         # Regex: chỉ cho phép chữ cái, số, khoảng trắng và một số ký tự cơ bản (.,-)
         if not re.match(r'^[\w\s\.,\-àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđĐ]+$', ten_nguyen_lieu, re.UNICODE):
             return Response(

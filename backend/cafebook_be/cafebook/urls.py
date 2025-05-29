@@ -13,6 +13,7 @@ from .views.authentication import login_view
 from .views.staff import NhanVienViewSet, ChucVuViewSet
 from .views.statitics import StatisticsView
 from .views.forgotpassword import forgot_password, verify_otp, reset_password
+from .views.change_password import change_password
 
 router = DefaultRouter()
 router.register(r'sanpham', SanphamViewSet)
@@ -32,6 +33,7 @@ urlpatterns = [
     path("order/create/", createOrder, name="create_order"),
     path("order/details/", createOrderDetails, name="create_order_line"),
     path("statistics/", StatisticsView.as_view(), name="statistics"),
+    path("change-password/", change_password, name="change_password"),
     path("forgot-password/", forgot_password, name="forgot_password"),
     path("verify-otp/", verify_otp, name="verify_otp"),
     path("reset-password/", reset_password, name="reset-password"),
