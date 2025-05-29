@@ -6,7 +6,7 @@ import { getAuthToken } from './authapi';
 export interface Ingredient {
   id: number;
   ten_nguyen_lieu: string;
-  so_luong: number;
+  so_luong: string;
   don_vi: string;
   gia_nhap?: number;
 }
