@@ -1,16 +1,18 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views.authentication import login_view
+from .views.authentication import login_view  # Import hàm xử lý login
 from .views.createOrder import createOrder, createOrderDetails
-from .views.getProduct import (SanphamViewSet, VoucherViewSet, DonghoadonViewSet, HoadonViewSet)
-from .views.ingredient import NguyenLieuViewSet
-from .views.book import SachViewSet, TheLoaiViewSet
-from .views.attendance import check_attendance
+from .views.getProduct import (SanphamViewSet, DonghoadonViewSet, HoadonViewSet)  # Import các viewset cho sản phẩm, voucher và hóa đơn
+from .views.ingredient import NguyenLieuViewSet  # Import viewset cho nguyên liệu
+from .views.book import SachViewSet, TheLoaiViewSet  # Import viewset cho sách
+from .views.attendance import check_attendance  # Import hàm chấm công
+from .views.voucher import VoucherViewSet
+from .views.staff import NhanVienViewSet, ChucVuViewSet  # Import viewset cho nhân viên và chức vụ
+from .views.checkpermission import check_permission_api
+from .views.authentication import login_view
 from .views.staff import NhanVienViewSet, ChucVuViewSet
-from .views.staff_register import register_staff  # Thêm import này
-from .views.change_password import change_password  # Thêm dòng này vào phần import
+from .views.statitics import StatisticsView
 
-# Tạo router cho các ViewSet
 router = DefaultRouter()
 router.register(r'sanpham', SanphamViewSet)
 router.register(r'voucher', VoucherViewSet)
@@ -24,11 +26,11 @@ router.register(r'chucvu', ChucVuViewSet)
 
 urlpatterns = [
     path("login/", login_view),
+    path("checkpermission/", check_permission_api),
     path("attendance/check/", check_attendance, name="check_attendance"),
     path("order/create/", createOrder, name="create_order"),
     path("order/details/", createOrderDetails, name="create_order_line"),
-    path("staff/register/", register_staff, name="register_staff"),
-    path("change-password/", change_password, name="change_password"),
+    path('statistics/', StatisticsView.as_view(), name='statistics'),
     path("", include(router.urls)),
 ]
 

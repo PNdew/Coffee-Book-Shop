@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView, Alert, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { jwtDecode, JwtPayload } from 'jwt-decode';
 import BackButton from '@/components/createorder/BackButton';
 import { OrderItem, Voucher } from '@/types';
 import { submitOrderToAPI, getCurrentUser } from '@/services/createorderapi';
+import * as SecureStore from 'expo-secure-store';
 
 // Interface cho token JWT có thêm các trường tùy chỉnh
 interface CustomJwtPayload extends JwtPayload {
@@ -33,7 +34,13 @@ export default function BillScreen() {
       console.log('Đang gửi đơn hàng lên API:', items);
 
       // Thử tạo payload đơn hàng trực tiếp ở đây để debug
-      const token = localStorage.getItem('access_token');
+      let token;
+      if (Platform.OS === 'web') {
+        token = localStorage.getItem('access_token');
+      } else {
+        token = SecureStore.getItem('access_token');
+      }
+
       const decoded = token ? jwtDecode(token) : null;
 
       if (!decoded) {
@@ -99,7 +106,12 @@ export default function BillScreen() {
       console.log('===== Bắt đầu xử lý thanh toán QR =====');
 
       // Thử kiểm tra token trước khi gửi
-      const token = localStorage.getItem('access_token');
+      let token;
+      if (Platform.OS === 'web') {
+        token = localStorage.getItem('access_token');
+      } else {
+        token = SecureStore.getItem('access_token');
+      }
 
       if (!token) {
         Alert.alert('Lỗi', 'Không tìm thấy token đăng nhập!');
@@ -115,30 +127,23 @@ export default function BillScreen() {
         console.error('Lỗi giải mã token:', e);
       }
 
-      const success = await handleOrderSubmission();
-      console.log('Kết quả gửi API:', success);
+      console.log('Chuyển đến trang QR với số tiền:', totalAmount);
 
-      if (success) {
-        console.log('Chuyển đến trang QR với số tiền:', totalAmount);
-
-        // Sử dụng push thay vì replace để dễ quay lại
-        // Chuyển trang ngay với trạng thái pending
-        router.push({
-          pathname: './Payment-QR',
-          params: {
-            totalAmount: totalAmount.toString(),
-            paymentInfo: JSON.stringify({
-              items: items.map(item => item.name).join(', '),
-              isPending: true // Thêm flag để biết đang chờ API
-            })
-          }
-        });
-      } else {
-        console.log('Không thể chuyển đến trang QR do lỗi API');
-      }
+      // Chuyển trang với thông tin thanh toán
+      router.push({
+        pathname: './Payment-QR',
+        params: {
+          totalAmount: totalAmount.toString(),
+          items: JSON.stringify(items),
+          voucherInfo: activeVoucher ? JSON.stringify(activeVoucher) : null,
+          paymentInfo: JSON.stringify({
+            isPending: true
+          })
+        }
+      });
     } catch (error) {
       console.error('Lỗi khi xử lý thanh toán QR:', error);
-      Alert.alert('Lỗi', 'Không thể xử lý thanh toán QR. Vui lòng thử lại.');
+      Alert.alert('Lỗi', 'Không thể chuyển đến trang thanh toán QR. Vui lòng thử lại.');
     }
   };
 

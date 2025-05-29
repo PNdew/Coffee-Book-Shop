@@ -22,14 +22,7 @@ SECRET_KEY = 'django-insecure-cq7fvh48u7i*$rpje6)4l$hysiq=x7d#(04krwovr^0*9$1sx5
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost',
-    '127.0.0.1',
-    '192.168.0.111',
-    '192.168.85.15',
-    '172.20.10.6',
-    '192.168.1.3'
-] 
-
+ALLOWED_HOSTS = ['*'] 
 
 # Application definition
 
@@ -76,7 +69,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'cafebook_be.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -84,10 +76,10 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "cafebook",
-        "USER": "root",
-        "PASSWORD": "Manhm0ss@",
+        "USER": "long",
+        "PASSWORD": "12345",
         "HOST": "127.0.0.1",
-        "PORT": "3306",
+        "PORT": "3307",
     }
 }
 

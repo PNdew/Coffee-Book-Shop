@@ -3,7 +3,8 @@ import { Text, View } from '@/components/Themed';
 import { StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
-import { bookService, theLoaiService, TheLoai } from '@/services/bookapi';
+import { bookService, theLoaiService } from '@/services/bookapi';
+import { TheLoai } from '@/types';
 import AlertDialog from '@/components/AlertDialog';
 import MultiSelect from '@/components/MultiSelect';
 
@@ -128,7 +129,7 @@ export default function SuaSachScreen() {
       // Điều hướng về trang danh sách sau 1.5 giây
       setTimeout(() => {
         router.push({
-          pathname: '../sach',
+          pathname: './BookScreen',
           params: { refresh: Date.now().toString() }
         });
       }, 1500);
@@ -147,7 +148,7 @@ export default function SuaSachScreen() {
       
       // Điều hướng về trang danh sách sau khi xóa
       router.push({
-        pathname: '../sach',
+        pathname: './BookScreen',
         params: { refresh: Date.now().toString() }
       });
     } catch (err) {
@@ -166,7 +167,7 @@ export default function SuaSachScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Link href="../sach" asChild>
+        <Link href="./BookScreen" asChild>
           <Pressable style={styles.backButton}>
             <FontAwesome name="arrow-left" size={20} color="black" />
           </Pressable>
@@ -286,9 +287,6 @@ export default function SuaSachScreen() {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Thêm khoảng trống để tránh nút ở dưới che nội dung */}
-          <View style={{ height: 80 }} />
         </ScrollView>
       )}
 
@@ -337,8 +335,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: "center",
+    backgroundColor: "none",
     marginBottom: 15,
-    paddingTop: 10,
   },
   backButton: {
     padding: 8,
@@ -346,6 +345,7 @@ const styles = StyleSheet.create({
   titleWrapper: {
     flex: 1,
     alignItems: 'center',
+    backgroundColor: "none",
   },
   titleContainer: {
     backgroundColor: '#FF8F8F',
@@ -366,6 +366,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   formSection: {
+    backgroundColor: "none",
     marginBottom: 15,
   },
   label: {

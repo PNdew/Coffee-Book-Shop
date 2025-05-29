@@ -10,6 +10,7 @@ export default function AddIngredientScreen() {
   const [tenNguyenLieu, setTenNguyenLieu] = useState('');
   const [soLuong, setSoLuong] = useState('');
   const [giaNhap, setGiaNhap] = useState('');
+  const [donVi, setDonVi] = useState('');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ 
     visible: boolean, 
@@ -33,8 +34,9 @@ export default function AddIngredientScreen() {
       setLoading(true);
       await ingredientService.addIngredient({
         ten_nguyen_lieu: tenNguyenLieu,
-        so_luong: soLuong,
-        gia_nhap: Number(giaNhap)
+        so_luong: parseInt(soLuong),
+        don_vi: donVi,
+        gia_nhap: parseInt(giaNhap),
       });
       
       setToast({
@@ -101,6 +103,16 @@ export default function AddIngredientScreen() {
             style={styles.input}
             value={soLuong}
             onChangeText={setSoLuong}
+            placeholder=""
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Đơn vị *</Text>
+          <TextInput
+            style={styles.input}
+            value={donVi}
+            onChangeText={setDonVi}
             placeholder=""
           />
         </View>

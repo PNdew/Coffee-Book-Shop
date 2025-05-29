@@ -40,10 +40,6 @@ export default function FoodsScreen() {
         
         const foodItems = foods.map(item => convertSanphamToOrderItem(item));
         
-        // Log converted food items
-        console.log('==== CONVERTED FOOD ITEMS ====');
-        console.log(JSON.stringify(foodItems, null, 2));
-        
         setFoodsData(foodItems);
         setFilteredFoods(foodItems);
         
@@ -55,7 +51,6 @@ export default function FoodsScreen() {
         setQuantities(initialQuantities);
         
       } catch (err) {
-        console.error('Failed to fetch foods:', err);
         setError('Không thể tải danh sách đồ ăn');
       } finally {
         setLoading(false);

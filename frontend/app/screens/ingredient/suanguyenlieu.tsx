@@ -16,10 +16,10 @@ export default function EditIngredientScreen() {
   const [giaNhap, setGiaNhap] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingInitial, setLoadingInitial] = useState(true);
-  const [toast, setToast] = useState({ 
-    visible: false, 
-    message: '', 
-    type: 'info' as 'info' | 'error' | 'success' 
+  const [toast, setToast] = useState({
+    visible: false,
+    message: '',
+    type: 'info' as 'info' | 'error' | 'success'
   });
   const [confirmDialog, setConfirmDialog] = useState(false);
   const router = useRouter();
@@ -63,16 +63,16 @@ export default function EditIngredientScreen() {
       setLoading(true);
       await ingredientService.updateIngredient(idString, {
         ten_nguyen_lieu: tenNguyenLieu,
-        so_luong: soLuong,
+        so_luong: parseInt(soLuong),
         gia_nhap: parseInt(giaNhap)
       });
-      
+
       setToast({
         visible: true,
         message: 'Cập nhật nguyên liệu thành công!',
         type: 'success'
       });
-      
+
       // Navigate back to list with refresh parameter
       setTimeout(() => {
         router.push({
@@ -95,13 +95,13 @@ export default function EditIngredientScreen() {
     try {
       setLoading(true);
       await ingredientService.deleteIngredient(idString);
-      
+
       setToast({
         visible: true,
         message: 'Đã xóa nguyên liệu thành công!',
         type: 'success'
       });
-      
+
       // Navigate back to list with refresh parameter
       setTimeout(() => {
         router.push({
@@ -132,7 +132,7 @@ export default function EditIngredientScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Link href="./IngredientScreen" asChild>
-          <Pressable style={styles.backButton}>
+          <Pressable style={styles.backButton} onPress={() => router.push('./IngredientScreen')}>
             <FontAwesome name="arrow-left" size={20} color="black" />
           </Pressable>
         </Link>
@@ -141,13 +141,13 @@ export default function EditIngredientScreen() {
             <Text style={styles.title}>Nguyên liệu cần sửa đổi</Text>
           </View>
         </View>
-        <View style={styles.iconContainer}>
-          <FontAwesome name="refresh" size={20} color="#ccc" />
-        </View>
+        <TouchableOpacity style={styles.iconContainer}>
+          <FontAwesome name="refresh" size={20} color="#666" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.formContainer}>
-        <View style={styles.inputGroup}>
+        <View style={styles.formSection}>
           <Text style={styles.label}>Tên nguyên liệu *</Text>
           <TextInput
             style={styles.input}
@@ -157,7 +157,7 @@ export default function EditIngredientScreen() {
           />
         </View>
 
-        <View style={styles.inputGroup}>
+        <View style={styles.formSection}>
           <Text style={styles.label}>Số Lượng *</Text>
           <TextInput
             style={styles.input}
@@ -167,7 +167,7 @@ export default function EditIngredientScreen() {
           />
         </View>
 
-        <View style={styles.inputGroup}>
+        <View style={styles.formSection}>
           <Text style={styles.label}>Giá nhập *</Text>
           <TextInput
             style={styles.input}
@@ -180,16 +180,16 @@ export default function EditIngredientScreen() {
       </View>
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={[styles.deleteButton, loading && styles.disabledButton]} 
+        <TouchableOpacity
+          style={[styles.deleteButton, loading && styles.disabledButton]}
           onPress={() => setConfirmDialog(true)}
           disabled={loading}
         >
           <Text style={styles.buttonText}>Xóa nguyên liệu</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.updateButton, loading && styles.disabledButton]} 
+
+        <TouchableOpacity
+          style={[styles.updateButton, loading && styles.disabledButton]}
           onPress={handleUpdateIngredient}
           disabled={loading}
         >
@@ -230,8 +230,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: "center",
+    backgroundColor: "none",
     marginBottom: 15,
-    paddingTop: 10,
   },
   backButton: {
     padding: 8,
@@ -239,6 +240,7 @@ const styles = StyleSheet.create({
   titleWrapper: {
     flex: 1,
     alignItems: 'center',
+    backgroundColor: "none",
   },
   titleContainer: {
     backgroundColor: '#FF8F8F',
@@ -256,9 +258,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   formContainer: {
+    backgroundColor: "none",
     marginTop: 20,
   },
-  inputGroup: {
+  formSection: {
+    backgroundColor: "none",
     marginBottom: 15,
   },
   label: {

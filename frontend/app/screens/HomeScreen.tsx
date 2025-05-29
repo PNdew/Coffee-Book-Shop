@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TextInput, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Platform, Alert } from 'react-native';
+import { View, Text, Image, TextInput, TouchableOpacity, SafeAreaView, ScrollView, StyleSheet, Dimensions, Platform, Alert } from 'react-native';
 import { FontAwesome, Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { getUserFromToken, getPermissionsByRole, logout } from '../../services/authapi';
@@ -96,17 +96,17 @@ const HomeScreen = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={[styles.header, { width: containerWidth }]}>
-        <View style={styles.userInfoContainer}>
-          <Text style={styles.welcomeText}>
-            Chào mừng trở lại, {userInfo?.TenNV || 'Người dùng'}!
-          </Text>
-          <Text style={styles.locationText}>
-            Vị trí: {userInfo?.ChucVuNV === ROLE.MANAGER ? 'Quản lý' : 'Nhân viên'}
-          </Text>
-        </View>
-        <View style={styles.headerButtons}>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <View style={[styles.header, { width: containerWidth }]}>
+          <View style={styles.userInfoContainer}>
+            <Text style={styles.welcomeText}>
+              Chào mừng trở lại, {userInfo?.TenNV || 'Người dùng'}!
+            </Text>
+            <Text style={styles.locationText}>
+              Vị trí: {userInfo?.ChucVuNV === ROLE.MANAGER ? 'Quản lý' : 'Nhân viên'}
+            </Text>
+          </View>
           <TouchableOpacity 
             onPress={() => router.push('./auth/ChangePasswordScreen')} 
             style={styles.changePasswordButton}
@@ -117,14 +117,8 @@ const HomeScreen = () => {
             <Text style={styles.logoutText}>Đăng xuất</Text>
           </TouchableOpacity>
         </View>
-      </View>
 
       <Image source={require('@/assets/images/logo.png')} style={styles.logo} />
-
-      <View style={[styles.searchContainer, isSearchFocused && styles.searchContainerFocused, { width: containerWidth }]}>
-        <TextInput placeholder="Tìm kiếm nhanh" style={styles.searchInput} />
-        <Feather name="search" size={20} color="gray" />
-      </View>
 
       <View style={[styles.gridContainer, { width: containerWidth }]}>
         {menuItems.map((item, index) => (
@@ -138,7 +132,8 @@ const HomeScreen = () => {
           </TouchableOpacity>
         ))}
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -148,6 +143,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f8f5e4',
     padding: 20,
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#222',
   },
   welcomeText: {
     fontSize: 18,
@@ -163,26 +162,6 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     marginBottom: 30,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    height: 40,
-    marginBottom: 30,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.25)',
-    elevation: 2,
-  },
-  searchContainerFocused: {
-    borderWidth: 0,
-  },
-  searchInput: {
-    flex: 1,
-    paddingHorizontal: 10,
-    fontSize: 14,
-    borderWidth: 0,
   },
   gridContainer: {
     flexDirection: 'row',
@@ -220,16 +199,11 @@ const styles = StyleSheet.create({
   userInfoContainer: {
     flex: 1,
   },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   changePasswordButton: {
-    marginRight: 10,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
+    padding: 10,
     backgroundColor: '#007bff',
     borderRadius: 5,
+    marginRight: 10,
   },
   changePasswordText: {
     color: '#fff',

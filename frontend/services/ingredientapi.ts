@@ -1,9 +1,6 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
-
-// Sử dụng địa chỉ IP thực tế của bạn
-export const API_URL = 'http://localhost:8000';
+import { API_URL } from './getAPIUrl';
+import { getAuthToken } from './authapi';
 
 // Interface cho nguyên liệu
 export interface Ingredient {
@@ -25,36 +22,24 @@ interface ApiResponse {
 // Interface cho đầu vào khi tạo nguyên liệu mới
 export interface IngredientInput {
   ten_nguyen_lieu: string;
-  so_luong: number;
+  so_luong: string;
   don_vi: string;
+  gia_nhap: number;
 }
 
-// Hàm lấy token xác thực từ localStorage hoặc SecureStore
-const getAuthToken = async (): Promise<string | null> => {
-  try {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem('access_token');
-    } else {
-      return await SecureStore.getItemAsync('access_token');
-    }
-  } catch (error) {
-    console.error('Error getting auth token:', error);
-    return null;
-  }
-};
 
 // Service cho nguyên liệu
 export const ingredientService = {
   getAllIngredients: async () => {
     try {
-      console.log('Gọi API tại:', `${API_URL}/api/nguyenlieu/`);
+      console.log('Gọi API tại:', `${API_URL}/nguyenlieu/`);
       const token = await getAuthToken();
-      const response = await axios.get(`${API_URL}/api/nguyenlieu/`, {
+      const response = await axios.get(`${API_URL}/nguyenlieu/`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : '',
         }
       });
-      console.log('Dữ liệu nhận được:', response.data);
+      // console.log('Dữ liệu nhận được:', response.data);
       
       // Xử lý cả hai trường hợp:
       // 1. Nếu dữ liệu là mảng (không có phân trang): trả về trực tiếp
@@ -77,7 +62,7 @@ export const ingredientService = {
   getIngredient: async (id: string) => {
     try {
       const token = await getAuthToken();
-      const response = await axios.get(`${API_URL}/api/nguyenlieu/${id}/`, {
+      const response = await axios.get(`${API_URL}/nguyenlieu/${id}/`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : ''
         }
@@ -92,7 +77,7 @@ export const ingredientService = {
   addIngredient: async (ingredientData: IngredientInput) => {
     try {
       const token = await getAuthToken();
-      const response = await axios.post(`${API_URL}/api/nguyenlieu/`, ingredientData, {
+      const response = await axios.post(`${API_URL}/nguyenlieu/`, ingredientData, {
         headers: {
           Authorization: token ? `Bearer ${token}` : ''
         }
@@ -107,7 +92,7 @@ export const ingredientService = {
   updateIngredient: async (id: string, ingredientData: Partial<Ingredient>) => {
     try {
       const token = await getAuthToken();
-      const response = await axios.put(`${API_URL}/api/nguyenlieu/${id}/`, ingredientData, {
+      const response = await axios.put(`${API_URL}/nguyenlieu/${id}/`, ingredientData, {
         headers: {
           Authorization: token ? `Bearer ${token}` : ''
         }
@@ -122,7 +107,7 @@ export const ingredientService = {
   deleteIngredient: async (id: string) => {
     try {
       const token = await getAuthToken();
-      await axios.delete(`${API_URL}/api/nguyenlieu/${id}/`, {
+      await axios.delete(`${API_URL}/nguyenlieu/${id}/`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : ''
         }
