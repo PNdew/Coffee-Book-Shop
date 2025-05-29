@@ -3,8 +3,6 @@ from cafebook.models import Voucher
 from cafebook.serializers import VoucherSerializer
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-
-import requests
 from django.forms.models import model_to_dict
 from datetime import datetime
 from rest_framework import filters

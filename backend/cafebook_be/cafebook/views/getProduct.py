@@ -17,10 +17,25 @@ class SanphamViewSet(viewsets.ModelViewSet):
     serializer_class = SanphamSerializer
     # permission_classes = [IsAuthenticatedWithJWT]
 
-class VoucherViewSet(viewsets.ModelViewSet):
-    queryset = Voucher.objects.all()
-    serializer_class = VoucherSerializer
-    # permission_classes = [IsAuthenticatedWithJWT]
+    def create(self, request, *args, **kwargs):
+        try:
+            serializer = self.get_serializer(data=request.data)
+            if serializer.is_valid():
+                print("Data validated:", serializer.validated_data)
+                self.perform_create(serializer)
+                return Response({
+                    "message": "Tạo sản phẩm thành công",
+                    "data": serializer.data
+                }, status=status.HTTP_201_CREATED)
+            print("Serializer errors:", serializer.errors)
+            return Response({
+                "error": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print("Exception in create:", str(e))
+            return Response({
+                "error": f"Lỗi khi tạo sản phẩm: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class HoadonViewSet(viewsets.ModelViewSet):
     queryset = Hoadon.objects.all().order_by('-ngayhd')
@@ -165,7 +180,7 @@ class DonghoadonViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(idsanpham__idsanpham=idsanpham)
             
         return queryset.order_by('idhoadon__idhoadon', 'sottdong')
-
+        
 # Các API đơn giản khác
 @api_view(['GET'])
 def get_sanpham_list(request):

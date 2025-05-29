@@ -4,25 +4,10 @@ import * as SecureStore from 'expo-secure-store';
 import { jwtDecode } from 'jwt-decode';
 import { API_URL } from './getAPIUrl';
 
-// Thêm hàm lấy token
-export const getToken = async (): Promise<string | null> => {
-  try {
-    let token;
-    if (Platform.OS === 'web') {
-      token = localStorage.getItem('access_token');
-    } else {
-      token = await SecureStore.getItemAsync('access_token');
-    }
-    return token;
-  } catch (error) {
-    console.error('Lỗi khi lấy token:', error);
-    return null;
-  }
-};
-
 // Phần code còn lại giữ nguyên
 export interface UserInfo {
   SDTNV: string;
+  IDNhanVien: number;
   TenNV: string;
   ChucVuNV: number; // 1: Quản lý, 2: Nhân viên
   exp?: number;
@@ -49,7 +34,7 @@ export interface ChangePasswordData {
 // Lấy thông tin người dùng từ token
 export const getUserFromToken = async (): Promise<UserInfo | null> => {
   try {
-    const token = await getToken();
+    const token = await getAuthToken();
     if (!token) return null;
 
     // Giải mã token để lấy thông tin
@@ -65,6 +50,7 @@ export const getUserFromToken = async (): Promise<UserInfo | null> => {
     // Tạo đối tượng UserInfo từ token đã giải mã
     const userInfo: UserInfo = {
       SDTNV: decoded.SDTNV,
+      IDNhanVien: decoded.IDNhanVien,
       TenNV: decoded.TenNV || "Người dùng", // Đây là dòng có thể gây ra vấn đề
       ChucVuNV: decoded.ChucVuNV,
       exp: decoded.exp
@@ -74,6 +60,49 @@ export const getUserFromToken = async (): Promise<UserInfo | null> => {
   } catch (error) {
     console.error('Lỗi khi lấy thông tin từ token:', error);
     return null;
+  }
+};
+
+// Lấy token xác thực
+export const getAuthToken = async (): Promise<string | null> => {
+  try {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem('access_token');
+    } else {
+      return await SecureStore.getItemAsync('access_token');
+    }
+  } catch (error) {
+    console.error('Lỗi khi lấy token:', error);
+    return null;
+  }
+};
+
+// Kiểm tra quyền từ API
+export const checkPermissionAPI = async (chucVu: number, chucNang: string): Promise<boolean> => {
+  try {
+    const token = await getAuthToken();
+    if (!token) {
+      return false;
+    }
+
+    const response = await axios.post(
+      `${API_URL}/api/check-permission/`,
+      {
+        chuc_vu: chucVu,
+        chuc_nang: chucNang
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return response.data.access === true;
+  } catch (error) {
+    console.error('Lỗi khi kiểm tra quyền:', error);
+    return false;
   }
 };
 
@@ -144,7 +173,7 @@ export const usePermissions = async (): Promise<Permissions> => {
 // API đổi mật khẩu
 export const changePassword = async (passwordData: ChangePasswordData): Promise<any> => {
   try {
-    const token = await getToken();
+    const token = await getAuthToken();
     
     if (!token) {
       throw new Error("Không có token, vui lòng đăng nhập lại");
@@ -167,18 +196,5 @@ export const changePassword = async (passwordData: ChangePasswordData): Promise<
       throw error.response?.data || error.message;
     }
     throw error;
-  }
-};
-
-export const getAuthToken = async (): Promise<string | null> => {
-  try {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem('access_token');
-    } else {
-      return await SecureStore.getItemAsync('access_token');
-    }
-  } catch (error) {
-    console.error('Error getting auth token:', error);
-    return null;
   }
 };

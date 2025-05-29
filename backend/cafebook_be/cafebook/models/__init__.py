@@ -8,5 +8,5 @@ from .book import Sach
 from .attendance import Attendance
 from .genre import TheLoai
 from .genrebook import TheLoaiCuaSach
-from .permission import NhomQuyen, Quyen
+from .permission import NhomQuyen, Quyen, ChucVu_Quyen, NhomQuyen_Quyen
 from .rolls import ChucVu
