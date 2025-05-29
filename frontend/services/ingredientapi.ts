@@ -9,7 +9,7 @@ export const API_URL = 'http://localhost:8000';
 export interface Ingredient {
   id: number;
   ten_nguyen_lieu: string;
-  so_luong: number;
+  so_luong: string;
   don_vi: string;
   gia_nhap?: number;
 }
