@@ -1,0 +1,5 @@
+export const DEFAULT_LOCATION = {
+  OFFICE_LAT: 10.762622,
+  OFFICE_LNG: 106.660172,
+  MAX_DISTANCE: 100 // meters
+};
