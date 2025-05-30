@@ -235,6 +235,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
+    backgroundColor: '#F3F3E7',
     alignItems: 'center',
     marginBottom: 15,
     paddingTop: 10,
@@ -243,6 +244,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   titleWrapper: {
+    backgroundColor: '#F3F3E7',
     flex: 1,
     alignItems: 'center',
   },
@@ -262,11 +264,13 @@ const styles = StyleSheet.create({
   },
   formSection: {
     marginBottom: 15,
+    backgroundColor: '#F3F3E7',
   },
   label: {
     fontSize: 14,
     marginBottom: 5,
     fontWeight: '500',
+    color: '#000',
   },
   input: {
     backgroundColor: 'white',
@@ -278,6 +282,7 @@ const styles = StyleSheet.create({
   },
   radioGroup: {
     flexDirection: 'row',
+    backgroundColor: '#F3F3E7',
     marginTop: 5,
   },
   radioOption: {
@@ -301,6 +306,7 @@ const styles = StyleSheet.create({
   radioLabel: {
     marginLeft: 8,
     fontSize: 14,
+    color: '#000',
   },
   saveButton: {
     backgroundColor: '#E4434A',

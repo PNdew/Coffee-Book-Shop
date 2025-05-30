@@ -64,3 +64,13 @@ class SachViewSet(viewsets.ModelViewSet):
         if error:
             return Response(error, status=status.HTTP_400_BAD_REQUEST)
         return super().update(request, *args, **kwargs)
+
+class TheLoaiViewSet(viewsets.ModelViewSet):
+    queryset = TheLoai.objects.all()
+    serializer_class = TheLoaiSerializer
+    pagination_class = None
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['ten_the_loai']
+    ordering_fields = ['ten_the_loai']
+    ordering = ['ten_the_loai']
+    # permission_classes = [IsAuthenticated]  # Bỏ comment nếu cần xác thực

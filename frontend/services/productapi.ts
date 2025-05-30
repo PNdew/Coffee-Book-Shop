@@ -3,11 +3,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SanphamAPI } from '@/types';
 import { API_URL } from './getAPIUrl';
 import { Platform } from 'react-native';
+import { getAuthToken } from './authapi';
 
 export const productService = {
   getAllProducts: async (): Promise<SanphamAPI[]> => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
+      const token = await getAuthToken();
       const response = await axios.get(`${API_URL}/sanpham/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -20,7 +21,7 @@ export const productService = {
 
   getProductById: async (id: string): Promise<SanphamAPI> => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
+      const token = await getAuthToken();
       const response = await axios.get(`${API_URL}/sanpham/${id}/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -33,7 +34,7 @@ export const productService = {
 
   createProduct: async (productData: any) => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
+      const token = await getAuthToken();
       if (!token) {
         throw new Error('No authentication token found');
       }
@@ -89,7 +90,7 @@ export const productService = {
 
   updateProduct: async (id: string, productData: any) => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
+      const token = await getAuthToken();
       if (!token) {
         throw new Error('Không tìm thấy token xác thực');
       }
@@ -154,9 +155,9 @@ export const productService = {
 
   deleteProduct: async (id: string): Promise<void> => {
     try {
-      const token = await AsyncStorage.getItem('access_token');
+      const token = await getAuthToken();
       await axios.delete(`${API_URL}/sanpham/${id}/`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
     } catch (error) {
       console.error(`Error deleting product with ID ${id}:`, error);

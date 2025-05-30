@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, TextInput, FlatList, TouchableOpacity, Pressable, ActivityIndicator, Alert, SafeAreaView, ScrollView } from 'react-native';
+import { StyleSheet, TextInput, FlatList, TouchableOpacity, Pressable, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Text, View } from '@/components/Themed';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
@@ -206,7 +206,7 @@ export default function SachScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <ScrollView>
+          <View>
             <FlatList
               data={filteredBooks}
               keyExtractor={item => item.id.toString()}
@@ -256,7 +256,7 @@ export default function SachScreen() {
               }
               ListFooterComponent={ListFooterComponent}
             />
-          </ScrollView>
+          </View>
         )}
 
         {/* Chỉ hiển thị nút thêm sách nếu có quyền thêm */}
@@ -334,13 +334,14 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: 35,
+    height: 40,
     fontSize: 14,
   },
   searchIcon: {
     marginLeft: 5,
   },
   listContent: {
+    backgroundColor: '#F3F3E7',
     paddingBottom: 20,
   },
   bookItem: {
@@ -350,6 +351,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   bookName: {
+    color: '#000',
     fontSize: 15,
     fontWeight: 'bold',
   },
@@ -385,6 +387,7 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -394,6 +397,7 @@ const styles = StyleSheet.create({
     color: '#555',
   },
   errorContainer: {
+    backgroundColor: '#fff',
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -430,6 +434,7 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   actionButtons: {
+    backgroundColor: '#fff',
     flexDirection: 'row',
     justifyContent: 'flex-end',
     marginTop: 8,
@@ -462,6 +467,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   centeredContent: {
+    backgroundColor: '#fff',
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

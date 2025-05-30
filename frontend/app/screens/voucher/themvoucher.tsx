@@ -1,11 +1,12 @@
+import React, { useState } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Text, View } from '@/components/Themed';
 import { Link, useRouter } from 'expo-router';
-import { useState } from 'react';
 import { voucherService } from '@/services/voucherapi';
 import ToastMessage from '@/components/ToastMessage';
 import { Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Định nghĩa các loại sản phẩm
 const LOAI_SAN_PHAM = {
@@ -32,6 +33,8 @@ export default function ThemVoucherScreen() {
   const [ngayBatDau, setNgayBatDau] = useState('');
   const [ngayKetThuc, setNgayKetThuc] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [toast, setToast] = useState<{ 
     visible: boolean, 
     message: string, 
@@ -40,8 +43,14 @@ export default function ThemVoucherScreen() {
   const router = useRouter();
 
   // Format date to YYYY-MM-DD
-  const formatDate = (date: Date): string => {
-    return date.toISOString().split('T')[0];
+  const formatDate = (date: Date | undefined): string => {
+    if (!date) return '';
+    try {
+      return date.toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Invalid date:', date);
+      return '';
+    }
   };
 
   const showMessage = (message: string, type: 'info' | 'error' | 'success') => {
@@ -69,12 +78,17 @@ export default function ThemVoucherScreen() {
 
     try {
       setLoading(true);
+      
+      // Đảm bảo chỉ gửi định dạng YYYY-MM-DD mà không có phần thời gian
+      const startDate = ngayBatDau.split('T')[0];
+      const endDate = ngayKetThuc.split('T')[0];
+      
       await voucherService.addVoucher({
         tenvoucher: tenVoucher,
         loaisp: loaiSP,
         giamgia: Number(giamGia),
-        thoigianbatdauvoucher: ngayBatDau,
-        thoigianketthucvoucher: ngayKetThuc
+        thoigianbatdauvoucher: startDate,
+        thoigianketthucvoucher: endDate
       });
       
       showMessage('Thêm voucher thành công!', 'success');
@@ -105,6 +119,8 @@ export default function ThemVoucherScreen() {
     value: string,
     onChange: (event: any, date?: Date) => void,
     placeholder: string,
+    showPicker: boolean,
+    setShowPicker: (show: boolean) => void,
     minDate?: string
   ) => {
     if (Platform.OS === 'web') {
@@ -130,15 +146,32 @@ export default function ThemVoucherScreen() {
     }
 
     return (
-      <TouchableOpacity
-        style={styles.dateInputContainer}
-        onPress={() => onChange({}, new Date())}
-      >
-        <Text style={styles.dateText}>
-          {value || placeholder}
-        </Text>
-        <FontAwesome name="calendar" size={20} color="#666" />
-      </TouchableOpacity>
+      <>
+        <TouchableOpacity
+          style={styles.dateInputContainer}
+          onPress={() => setShowPicker(true)}
+        >
+          <Text style={[styles.dateText, !value && styles.placeholderText]}>
+            {value || placeholder}
+          </Text>
+          <FontAwesome name="calendar" size={20} color="#666" />
+        </TouchableOpacity>
+
+        {showPicker && (
+          <DateTimePicker
+            value={value ? new Date(value) : new Date()}
+            mode="date"
+            display="default"
+            onChange={(event, selectedDate) => {
+              setShowPicker(false);
+              if (event.type !== 'dismissed' && selectedDate) {
+                onChange(event, selectedDate);
+              }
+            }}
+            minimumDate={minDate ? new Date(minDate) : undefined}
+          />
+        )}
+      </>
     );
   };
 
@@ -204,14 +237,18 @@ export default function ThemVoucherScreen() {
           <Text style={styles.label}>Ngày bắt đầu *</Text>
           {renderDateInput(
             ngayBatDau,
-            (event: any) => {
+            (event: any, selectedDate?: Date) => {
               if (Platform.OS === 'web') {
                 setNgayBatDau(event.target.value);
               } else {
-                setNgayBatDau(formatDate(event));
+                if (selectedDate) {
+                  setNgayBatDau(formatDate(selectedDate));
+                }
               }
             },
             'Chọn ngày bắt đầu',
+            showStartDatePicker,
+            setShowStartDatePicker,
             formatDate(new Date())
           )}
           <Text style={styles.helperText}>
@@ -223,14 +260,18 @@ export default function ThemVoucherScreen() {
           <Text style={styles.label}>Ngày kết thúc *</Text>
           {renderDateInput(
             ngayKetThuc,
-            (event: any) => {
+            (event: any, selectedDate?: Date) => {
               if (Platform.OS === 'web') {
                 setNgayKetThuc(event.target.value);
               } else {
-                setNgayKetThuc(formatDate(event));
+                if (selectedDate) {
+                  setNgayKetThuc(formatDate(selectedDate));
+                }
               }
             },
             'Chọn ngày kết thúc',
+            showEndDatePicker,
+            setShowEndDatePicker,
             ngayBatDau || formatDate(new Date())
           )}
           <Text style={styles.helperText}>
@@ -348,6 +389,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+    backgroundColor: '#fff',
   },
   radioButtonSelected: {
     width: 12,
@@ -373,6 +415,9 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 14,
     color: '#333',
+  },
+  placeholderText: {
+    color: '#999',
   },
   helperText: {
     fontSize: 12,

@@ -809,6 +809,7 @@ const styles = StyleSheet.create({
   },
   centeredContent: {
     flex: 1,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
   },

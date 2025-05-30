@@ -33,7 +33,7 @@ const ForgotPasswordScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push("../index")} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push("..")} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Quên mật khẩu</Text>

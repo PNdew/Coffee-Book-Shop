@@ -346,7 +346,7 @@ export default function StatisticsScreen() {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.push('./HomeScreen')}
+          onPress={() => router.push('../HomeScreen')}
         >
           <Ionicons name="chevron-back" size={24} color="#333" />
         </TouchableOpacity>

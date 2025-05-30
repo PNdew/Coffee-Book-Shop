@@ -82,7 +82,7 @@ export const voucherService = {
   
   deleteVoucher: async (id: string) => {
     try {
-      const token = getAuthToken();
+      const token = await getAuthToken();
       await axios.delete(`${API_URL}/voucher/${id}/`, {
         headers: {
           Authorization: token ? `Bearer ${token}` : '',

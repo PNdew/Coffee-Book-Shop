@@ -72,7 +72,6 @@ class NguyenLieuViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Kiểm tra tên sách
         ten_nguyen_lieu = data.get('ten_nguyen_lieu', '').strip()
         if not ten_nguyen_lieu or not gia_nhap:
             return Response(
@@ -86,10 +85,4 @@ class NguyenLieuViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        if NguyenLieu.objects.filter(ten_nguyen_lieu__iexact=ten_nguyen_lieu).exists():
-            return Response(
-                {"error": f"Nguyên liệu '{ten_nguyen_lieu}' đã tồn tại"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        return super().create(request, *args, **kwargs)
+        return super().update(request, *args, **kwargs)

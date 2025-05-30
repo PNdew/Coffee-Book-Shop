@@ -63,7 +63,7 @@ export default function AddIngredientScreen() {
       // Navigate back to list with refresh parameter
       setTimeout(() => {
         router.push({
-          pathname: '../IngredientScreen',
+          pathname: './IngredientScreen',
           params: { refresh: new Date().getTime() }
         });
       }, 1500);
@@ -167,15 +167,18 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
+    backgroundColor: '#F3F3E7',
     alignItems: 'center',
     marginBottom: 15,
     paddingTop: 10,
   },
   backButton: {
+    backgroundColor: '#F3F3E7',
     padding: 8,
   },
   titleWrapper: {
     flex: 1,
+    backgroundColor: '#F3F3E7',
     alignItems: 'center',
   },
   titleContainer: {
@@ -191,12 +194,15 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     width: 30,
+    backgroundColor: '#F3F3E7',
     alignItems: 'center',
   },
   formContainer: {
+    backgroundColor: 'fff',
     marginTop: 20,
   },
   inputGroup: {
+    backgroundColor: 'fff',
     marginBottom: 15,
   },
   label: {

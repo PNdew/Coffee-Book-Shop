@@ -48,7 +48,7 @@ class VoucherViewSet(viewsets.ModelViewSet):
                 else:
                     raise ValueError("Thiếu thời gian bắt đầu")
             else:
-                thoi_gian_bat_dau = datetime.strptime(tg_bat_dau_str, '%Y-%m-%dT%H:%M:%S.%fZ')
+                thoi_gian_bat_dau = datetime.strptime(tg_bat_dau_str, '%Y-%m-%d')
 
             if not tg_ket_thuc_str:
                 if is_update and instance:
@@ -56,7 +56,7 @@ class VoucherViewSet(viewsets.ModelViewSet):
                 else:
                     raise ValueError("Thiếu thời gian kết thúc")
             else:
-                thoi_gian_ket_thuc = datetime.strptime(tg_ket_thuc_str, '%Y-%m-%dT%H:%M:%S.%fZ')
+                thoi_gian_ket_thuc = datetime.strptime(tg_ket_thuc_str, '%Y-%m-%d')
 
             if thoi_gian_bat_dau >= thoi_gian_ket_thuc:
                 errors['thoigian'] = "Thời gian kết thúc phải sau thời gian bắt đầu"

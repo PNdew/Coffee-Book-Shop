@@ -164,7 +164,7 @@ export const submitOrderToAPI = async (
 
     if (!orderDetailsRes.ok) {
       const errText = await orderDetailsRes.text();
-      throw new Error(`Không thể gửi chi tiết đơn hàng: ${orderDetailsRes.status} - ${errText}`);
+      throw new Error(`Không thể gửi chi tiết đơn hàng: ${orderDetailsRes.status} - ${errText}` );
     }
 
     return idhoadon;
@@ -173,4 +173,3 @@ export const submitOrderToAPI = async (
     throw error;
   }
 };
-

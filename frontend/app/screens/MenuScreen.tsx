@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, SafeAreaView, TextInput, Modal, Pressable, ActivityIndicator, Alert, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, SafeAreaView, TextInput, Modal, Pressable, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Link, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -504,7 +504,7 @@ export default function MenuScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <ScrollView>
+          <View>
             <FlatList
               data={filteredProducts}
               keyExtractor={(item) => item.idsanpham.toString()}
@@ -532,7 +532,7 @@ export default function MenuScreen() {
               }
               ListFooterComponent={ListFooterComponent}
             />
-          </ScrollView>
+          </View>
         )}
 
         {permissions.canAdd && (

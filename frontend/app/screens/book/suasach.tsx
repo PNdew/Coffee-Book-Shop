@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: "center",
-    backgroundColor: "none",
+    backgroundColor: "#F3F3E7",
     marginBottom: 15,
   },
   backButton: {
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   titleWrapper: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: "none",
+    backgroundColor: "#F3F3E7",
   },
   titleContainer: {
     backgroundColor: '#FF8F8F',
@@ -373,6 +373,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 5,
     fontWeight: '500',
+    color: '#000',
   },
   input: {
     backgroundColor: 'white',
@@ -385,6 +386,7 @@ const styles = StyleSheet.create({
   radioGroup: {
     flexDirection: 'row',
     marginTop: 5,
+    backgroundColor: '#F3F3E7',
   },
   radioOption: {
     flexDirection: 'row',
@@ -407,11 +409,13 @@ const styles = StyleSheet.create({
   radioLabel: {
     marginLeft: 8,
     fontSize: 14,
+    color: '#000',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff',
   },
   loadingText: {
     marginTop: 10,

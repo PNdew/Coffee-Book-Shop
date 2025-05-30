@@ -75,7 +75,7 @@ export default function EditIngredientScreen() {
       setLoading(true);
       await ingredientService.updateIngredient(idString, {
         ten_nguyen_lieu: tenNguyenLieu,
-        so_luong: parseInt(soLuong),
+        so_luong: soLuong,
         don_vi: donVi,
         gia_nhap: parseInt(giaNhap)
       });
@@ -298,6 +298,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
+    backgroundColor: 'fff',
     position: 'absolute',
     bottom: 20,
     left: 20,

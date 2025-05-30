@@ -182,7 +182,7 @@ export default function NguyenLieuScreen() {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Tìm kiếm theo tên sách, tác giả"
+          placeholder="Tìm kiếm theo tên nguyên liệu"
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -202,56 +202,54 @@ export default function NguyenLieuScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView>
-          <FlatList
-            data={filteredIngredients}
-            keyExtractor={item => item.id.toString()}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.ingredientItem}
-                onPress={() => handleIngredientPress(item.id.toString())}
-                onLongPress={() => permissions.canDelete && handleLongPress(item.id.toString())}
-              >
-                <Text style={styles.ingredientName}>{item.ten_nguyen_lieu}</Text>
-                <Text style={styles.ingredientQuantity}>
-                  Số lượng: {item.so_luong} {item.don_vi}
-                </Text>
+        <FlatList
+          data={filteredIngredients}
+          keyExtractor={item => item.id.toString()}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.ingredientItem}
+              onPress={() => handleIngredientPress(item.id.toString())}
+              onLongPress={() => permissions.canDelete && handleLongPress(item.id.toString())}
+            >
+              <Text style={styles.ingredientName}>{item.ten_nguyen_lieu}</Text>
+              <Text style={styles.ingredientQuantity}>
+                Số lượng: {item.so_luong} {item.don_vi}
+              </Text>
 
-                {/* Hiển thị các nút tùy theo quyền */}
-                {permissions.canEdit && (
-                  <View style={styles.actionButtons}>
+              {/* Hiển thị các nút tùy theo quyền */}
+              {permissions.canEdit && (
+                <View style={styles.actionButtons}>
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => router.push(`./suanguyenlieu?id=${item.id}`)}
+                  >
+                    <FontAwesome name="edit" size={16} color="#007bff" />
+                    <Text style={styles.editButtonText}>Sửa</Text>
+                  </TouchableOpacity>
+
+                  {permissions.canDelete && (
                     <TouchableOpacity
-                      style={styles.editButton}
-                      onPress={() => router.push(`./suanguyenlieu?id=${item.id}`)}
+                      style={styles.deleteButton}
+                      onPress={() => handleLongPress(item.id.toString())}
                     >
-                      <FontAwesome name="edit" size={16} color="#007bff" />
-                      <Text style={styles.editButtonText}>Sửa</Text>
+                      <FontAwesome name="trash" size={16} color="#dc3545" />
+                      <Text style={styles.deleteButtonText}>Xóa</Text>
                     </TouchableOpacity>
-
-                    {permissions.canDelete && (
-                      <TouchableOpacity
-                        style={styles.deleteButton}
-                        onPress={() => handleLongPress(item.id.toString())}
-                      >
-                        <FontAwesome name="trash" size={16} color="#dc3545" />
-                        <Text style={styles.deleteButtonText}>Xóa</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>
-                  {searchQuery ? 'Không tìm thấy nguyên liệu phù hợp' : 'Chưa có nguyên liệu nào'}
-                </Text>
-              </View>
-            }
-            ListFooterComponent={ListFooterComponent}
-          />
-        </ScrollView>
+                  )}
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>
+                {searchQuery ? 'Không tìm thấy nguyên liệu phù hợp' : 'Chưa có nguyên liệu nào'}
+              </Text>
+            </View>
+          }
+          ListFooterComponent={ListFooterComponent}
+        />
       )}
 
       {/* Chỉ hiển thị nút thêm nguyên liệu nếu có quyền thêm */}
@@ -329,13 +327,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#ffffff',
     borderRadius: 5,
-    paddingHorizontal: 10,
     marginBottom: 15,
+    lineHeight: 35,
     height: 35,
   },
   searchInput: {
     flex: 1,
-    height: 35,
+    height: 40,
     fontSize: 14,
   },
   searchIcon: {
@@ -353,6 +351,7 @@ const styles = StyleSheet.create({
   ingredientName: {
     fontSize: 15,
     fontWeight: 'bold',
+    color: '#000',
   },
   ingredientQuantity: {
     fontSize: 13,
@@ -388,6 +387,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff',
     padding: 20,
   },
   errorText: {
@@ -407,6 +407,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   actionButtons: {
+    backgroundColor: '#fff',
     flexDirection: 'row',
     justifyContent: 'flex-end',
     marginTop: 8,

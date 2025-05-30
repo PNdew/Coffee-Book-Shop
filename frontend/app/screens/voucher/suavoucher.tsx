@@ -170,12 +170,16 @@ export default function SuaVoucherScreen() {
       setError(null);
       setSuccess(false);
 
+      // Đảm bảo định dạng ngày tháng đúng YYYY-MM-DD không có phần thời gian
+      const startDate = ngayBatDau.split('T')[0];
+      const endDate = ngayKetThuc.split('T')[0];
+
       const voucherData = {
         tenvoucher: tenVoucher,
         loaisp: loaiSP,
         giamgia: Number(giamGia),
-        thoigianbatdauvoucher: ngayBatDau,
-        thoigianketthucvoucher: ngayKetThuc
+        thoigianbatdauvoucher: startDate,
+        thoigianketthucvoucher: endDate
       };
 
       await voucherService.updateVoucher(voucherId, voucherData);
@@ -459,6 +463,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   label: {
+    color: '#000',
     fontSize: 14,
     marginBottom: 5,
     fontWeight: '500',
@@ -562,6 +567,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+    backgroundColor: '#fff',
   },
   radioButtonSelected: {
     width: 12,

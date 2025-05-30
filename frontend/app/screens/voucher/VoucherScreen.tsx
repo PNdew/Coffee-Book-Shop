@@ -204,7 +204,7 @@ export default function VoucherScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <ScrollView>
+          <View>
             <FlatList
               data={filteredVouchers}
               keyExtractor={item => item.idvoucher.toString()}
@@ -254,9 +254,8 @@ export default function VoucherScreen() {
                   </Text>
                 </View>
               }
-              ListFooterComponent={() => <View style={{ height: 70 }} />}
             />
-          </ScrollView>
+          </View>
         )}
 
         {/* Chỉ hiển thị nút thêm voucher nếu có quyền thêm */}
@@ -334,13 +333,14 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: 35,
+    height: 40,
     fontSize: 14,
   },
   searchIcon: {
     marginLeft: 5,
   },
   listContent: {
+    backgroundColor: '#F3F3E7',
     paddingBottom: 20,
   },
   voucherItem: {
@@ -352,6 +352,7 @@ const styles = StyleSheet.create({
   voucherName: {
     fontSize: 15,
     fontWeight: 'bold',
+    color: '#000',
   },
   voucherDetails: {
     fontSize: 13,
@@ -382,6 +383,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff',
   },
   loadingText: {
     marginTop: 10,
@@ -393,6 +395,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    backgroundColor: '#fff',
   },
   errorText: {
     fontSize: 16,
@@ -414,6 +417,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     marginTop: 8,
+    backgroundColor: '#fff',
   },
   editButton: {
     flexDirection: 'row',
@@ -444,6 +448,7 @@ const styles = StyleSheet.create({
   },
   centeredContent: {
     flex: 1,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
   },
