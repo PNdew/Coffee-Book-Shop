@@ -1,9 +1,13 @@
 import * as Location from 'expo-location';
 import { Platform } from 'react-native';
-import { DEFAULT_LOCATION } from '../constants/location';
 import { getUserFromToken } from './authapi';
 import { checkPermissionAPI } from './checkpermissionapi';
 
+export const DEFAULT_LOCATION = {
+  OFFICE_LAT: 10.762622,
+  OFFICE_LNG: 106.660172,
+  MAX_DISTANCE: 100 // meters
+};
 interface Coordinates {
   latitude: number;
   longitude: number;
